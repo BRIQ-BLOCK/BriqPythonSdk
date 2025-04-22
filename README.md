@@ -1,6 +1,6 @@
 # Briq Python Client
 
-A Python client library for the Briq messaging platform API.
+Official Python client library for the Briq messaging platform API.
 
 ## Overview
 
@@ -63,7 +63,7 @@ result = client.message.send_instant(
 
 ## Documentation
 
-For detailed documentation and examples, please refer to the [Usage Guide](docs/usage.md) and [API Reference](docs/api_reference.md).
+For detailed documentation and examples, please refer to the [Official Usage Guide](https://briq.tz/documentation/home)
 
 ## License
 
