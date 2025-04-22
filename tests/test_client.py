@@ -10,17 +10,17 @@ from briq.exceptions import BriqAuthError, BriqAPIError, BriqRequestError
 class TestClient(unittest.TestCase):
     def setUp(self):
         # Create a client with a dummy API key for testing
-        self.client = Client(api_key="test_api_key")
+        self.client = Client(api_key="G8Rwq0qmk9T8MjpwzSrQmI7qRXmdjiLN-qxeRtrwCTQ")
     
     def test_init(self):
         # Test client initialization
         self.assertIsNotNone(self.client)
-        self.assertEqual(self.client.config.api_key, "test_api_key")
+        self.assertEqual(self.client.config.api_key, "G8Rwq0qmk9T8MjpwzSrQmI7qRXmdjiLN-qxeRtrwCTQ")
         self.assertEqual(self.client.config.base_url, "http://karibu.briq.tz")
         
         # Test initialization with custom base URL
-        client = Client(api_key="test_api_key", base_url="http://custom-url")
-        self.assertEqual(client.config.base_url, "http://custom-url")
+        client = Client(api_key="G8Rwq0qmk9T8MjpwzSrQmI7qRXmdjiLN-qxeRtrwCTQ", base_url="http://meetpay.africa")
+        self.assertEqual(client.config.base_url, "http://meetpay.africa")
     
     def test_set_api_key(self):
         # Test setting API key
@@ -42,7 +42,7 @@ class TestClient(unittest.TestCase):
         # Verify request was made correctly
         mock_request.assert_called_once_with(
             method="GET",
-            url="http://karibu.briq.tz/v1/test/endpoint",
+            url="http://karibu.briq.tz/karibu/x-api-key",
             headers=self.client.config.headers,
             json=None,
             params=None

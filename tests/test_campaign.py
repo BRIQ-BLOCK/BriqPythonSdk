@@ -140,5 +140,18 @@ class TestCampaignAPI(unittest.TestCase):
             data={}
         )
 
+    def test_invalid_campaign_id(self):
+        # Test get with invalid campaign_id
+        self.mock_client.get.side_effect = Exception("Campaign not found")
+        with self.assertRaises(Exception) as context:
+            self.campaign_api.get("invalid-id")
+        self.assertEqual(str(context.exception), "Campaign not found")
+
+    def test_empty_campaign_list(self):
+        # Test list with no campaigns
+        self.mock_client.get.return_value = []
+        result = self.campaign_api.list()
+        self.assertEqual(result, [])
+
 if __name__ == '__main__':
     unittest.main()

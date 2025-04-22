@@ -108,5 +108,18 @@ class TestWorkspaceAPI(unittest.TestCase):
             data={}
         )
 
+    def test_invalid_workspace_id(self):
+        # Test get with invalid workspace_id
+        self.mock_client.get.side_effect = Exception("Workspace not found")
+        with self.assertRaises(Exception) as context:
+            self.workspace_api.get("invalid-id")
+        self.assertEqual(str(context.exception), "Workspace not found")
+
+    def test_empty_workspace_list(self):
+        # Test list with no workspaces
+        self.mock_client.get.return_value = []
+        result = self.workspace_api.list()
+        self.assertEqual(result, [])
+
 if __name__ == '__main__':
     unittest.main()

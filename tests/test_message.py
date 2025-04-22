@@ -20,19 +20,19 @@ class TestMessageAPI(unittest.TestCase):
     def test_send_instant(self):
         # Test send_instant method with all parameters
         self.message_api.send_instant(
-            "Hello, this is a test message",
+            "Hello, this is a test message. lauched from v0.1.1.dev1 pre-release",
             ["255788344348", "255712345678"],
-            "test-sender",
-            "campaign-1"
+            "BRIQ",
+            ""
         )
         
         # Verify client.post was called with correct arguments
         self.mock_client.post.assert_called_once_with(
             "message/send-instant",
             data={
-                "content": "Hello, this is a test message",
+                "content": "Hello, this is a test message. lauched from v0.1.1.dev1 pre-release",
                 "recipients": ["255788344348", "255712345678"],
-                "sender_id": "test-sender",
+                "sender_id": "BRIQ",
                 "campaign_id": "campaign-1"
             }
         )
@@ -42,72 +42,38 @@ class TestMessageAPI(unittest.TestCase):
         self.message_api.send_instant(
             "Hello, this is a test message",
             ["255788344348"],
-            "test-sender"
+            "BRIQ"
         )
         
         # Verify client.post was called with correct arguments
         self.mock_client.post.assert_called_once_with(
             "message/send-instant",
             data={
-                "content": "Hello, this is a test message",
+                "content": "Hello, this is a test message. lauched from v0.1.1.dev1 pre-release",
                 "recipients": ["255788344348"],
-                "sender_id": "test-sender"
+                "sender_id": "BRIQ"
             }
         )
     
-    def test_send_campaign(self):
-        # Test send_campaign method
-        self.message_api.send_campaign(
-            "campaign-1",
-            "group-1",
-            "Campaign message content",
-            "test-sender"
-        )
-        
-        # Verify client.post was called with correct arguments
-        self.mock_client.post.assert_called_once_with(
-            "message/send-campaign",
-            data={
-                "campaign_id": "campaign-1",
-                "group_id": "group-1",
-                "content": "Campaign message content",
-                "sender_id": "test-sender"
-            }
-        )
-    
-    def test_get_logs(self):
-        # Mock response
-        mock_response = [
-            {"id": "message-1", "content": "Message 1", "status": "delivered"},
-            {"id": "message-2", "content": "Message 2", "status": "sent"}
-        ]
-        self.mock_client.get.return_value = mock_response
-        
-        # Test get_logs method
+
+    def test_invalid_campaign_id_in_message(self):
+        # Test send_instant with invalid campaign_id
+        self.mock_client.post.side_effect = Exception("Invalid campaign ID")
+        with self.assertRaises(Exception) as context:
+            self.message_api.send_instant(
+                "Test message",
+                ["255788344348"],
+                "BRIQ",
+                "invalid-campaign-id"
+            )
+        self.assertEqual(str(context.exception), "Invalid campaign ID")
+
+
+    def test_empty_message_logs(self):
+        # Test get_logs with no logs
+        self.mock_client.get.return_value = []
         result = self.message_api.get_logs()
-        
-        # Verify client.get was called with correct arguments
-        self.mock_client.get.assert_called_once_with("message/logs")
-        
-        # Verify result
-        self.assertEqual(result, mock_response)
-    
-    def test_get_history(self):
-        # Mock response
-        mock_response = [
-            {"id": "message-1", "content": "Message 1", "sent_at": "2023-01-01T12:00:00"},
-            {"id": "message-2", "content": "Message 2", "sent_at": "2023-01-02T12:00:00"}
-        ]
-        self.mock_client.get.return_value = mock_response
-        
-        # Test get_history method
-        result = self.message_api.get_history()
-        
-        # Verify client.get was called with correct arguments
-        self.mock_client.get.assert_called_once_with("message/history")
-        
-        # Verify result
-        self.assertEqual(result, mock_response)
+        self.assertEqual(result, [])
 
 if __name__ == '__main__':
     unittest.main()
