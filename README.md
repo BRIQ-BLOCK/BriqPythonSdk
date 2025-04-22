@@ -56,7 +56,7 @@ workspaces = client.workspace.list()
 # Send an instant message
 result = client.message.send_instant(
     content="Hello from the Briq Python client!",
-    recipients=["255788344348"],
+    recipients=["255***"],
     sender_id="my-sender-id"
 )
 ```
