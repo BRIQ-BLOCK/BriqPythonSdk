@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "briq"
-version = "0.1.0"
+version = "0.1.1.dev1"
 description = "Python client for the Briq messaging platform API"
 readme = "README.md"
 authors = [
@@ -27,5 +27,5 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/briq/briq-python"
-"Bug Tracker" = "https://github.com/briq/briq-python/issues"
+"Homepage" = "https://github.com/BRIQ-BLOCK/BriqPythonSdk"
+"Bug Tracker" = "https://github.com/BRIQ-BLOCK/BriqPythonSdk/issues"
