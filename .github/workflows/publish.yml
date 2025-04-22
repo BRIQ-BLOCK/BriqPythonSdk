@@ -18,6 +18,10 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Clean old build artifacts
+        run: |
+          rm -rf build/ dist/ *.egg-info
+
       - name: Install build tools
         run: |
           pip install build twine
