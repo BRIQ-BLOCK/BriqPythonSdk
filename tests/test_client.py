@@ -1,12 +1,14 @@
-import unittest
-from unittest.mock import patch, MagicMock
 import os
 import sys
+import unittest
+from unittest.mock import MagicMock, patch
+
 import requests as req
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from briq.client import Client
-from briq.exceptions import BriqAuthError, BriqAPIError, BriqRequestError, BriqValidationError
+from briq.exceptions import BriqAPIError, BriqAuthError, BriqRequestError, BriqValidationError
 
 
 class TestClient(unittest.TestCase):

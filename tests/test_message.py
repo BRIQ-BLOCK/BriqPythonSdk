@@ -1,7 +1,8 @@
-import unittest
-from unittest.mock import MagicMock
 import os
 import sys
+import unittest
+from unittest.mock import MagicMock
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from briq.message import MessageAPI
@@ -81,12 +82,12 @@ class TestMessageAPI(unittest.TestCase):
 
     def test_get_history(self):
         self.mock_client.get.return_value = []
-        result = self.message_api.get_history()
+        self.message_api.get_history()
         self.mock_client.get.assert_called_once_with("message/history")
 
     def test_get_history_by_recipient(self):
         self.mock_client.get.return_value = []
-        result = self.message_api.get_history_by_recipient("255788344348")
+        self.message_api.get_history_by_recipient("255788344348")
         self.mock_client.get.assert_called_once_with("message/history/recipient/255788344348")
 
     def test_get_message_log(self):

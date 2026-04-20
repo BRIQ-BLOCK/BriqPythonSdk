@@ -3,15 +3,16 @@ Client implementation for the Briq API.
 """
 
 import requests
-from .config import Config
-from .workspace import WorkspaceAPI
+
 from .campaign import CampaignAPI
+from .config import Config
+from .developer_apps import DeveloperAppsAPI
 from .message import MessageAPI
 from .meta import MetaAPI
-from .developer_apps import DeveloperAppsAPI
 from .otp import OtpAPI
 from .voice import VoiceAPI
 from .webhooks import WebhooksAPI
+from .workspace import WorkspaceAPI
 
 
 class Client:
