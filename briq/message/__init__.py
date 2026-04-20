@@ -2,6 +2,13 @@
 Message management module for the Briq API — Phase 4.
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..client import Client
+
 
 class MessageAPI:
     """
@@ -10,12 +17,20 @@ class MessageAPI:
     Provides methods for sending messages and retrieving message history and logs.
     """
 
-    def __init__(self, client):
+    def __init__(self, client: Client) -> None:
         self.client = client
 
-    def send_instant(self, content, recipients, sender_id,
-                     campaign_id=None, groups=None, flash=False,
-                     send_at=None, app_id=None):
+    def send_instant(
+        self,
+        content: str,
+        recipients: list[str],
+        sender_id: str,
+        campaign_id: str | None = None,
+        groups: list[str] | None = None,
+        flash: bool = False,
+        send_at: str | None = None,
+        app_id: str | None = None,
+    ) -> dict:
         """
         Send an instant message to one or multiple recipients.
 
@@ -49,9 +64,16 @@ class MessageAPI:
         extra_headers = {"X-App-ID": app_id} if app_id else None
         return self.client.post("message/send-instant", data=data, extra_headers=extra_headers)
 
-    def send_campaign(self, campaign_id, content, sender_id,
-                      start_date=None, end_date=None, frequency=None,
-                      app_id=None):
+    def send_campaign(
+        self,
+        campaign_id: str,
+        content: str,
+        sender_id: str,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        frequency: str | None = None,
+        app_id: str | None = None,
+    ) -> dict:
         """
         Send a message to all contacts in a campaign.
 
@@ -82,15 +104,15 @@ class MessageAPI:
         extra_headers = {"X-App-ID": app_id} if app_id else None
         return self.client.post("message/send-campaign", data=data, extra_headers=extra_headers)
 
-    def get_logs(self):
+    def get_logs(self) -> dict:
         """GET /v1/message/logs — fetch all message logs for the authenticated user."""
         return self.client.get("message/logs")
 
-    def get_history(self):
+    def get_history(self) -> dict:
         """GET /v1/message/history — retrieve all messages sent by the authenticated user."""
         return self.client.get("message/history")
 
-    def get_history_by_recipient(self, recipient):
+    def get_history_by_recipient(self, recipient: str) -> dict:
         """
         GET /v1/message/history/recipient/{recipient} — messages sent to a specific recipient.
 
@@ -98,11 +120,11 @@ class MessageAPI:
             recipient (str): Recipient phone number
 
         Returns:
-            list: List of MessageResponseRaw objects
+            dict: List of MessageResponseRaw objects
         """
         return self.client.get(f"message/history/recipient/{recipient}")
 
-    def get_message_log(self, message_id):
+    def get_message_log(self, message_id: str) -> dict:
         """
         GET /v1/message/message-log/{message_id} — retrieve details of a specific message.
 

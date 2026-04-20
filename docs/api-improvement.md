@@ -266,3 +266,32 @@ Complete **Phase 0** before Phases 1–7. **Phase 1** before **Phase 2** is reco
 - Pick **one phase**, implement it end-to-end, then check **Completion criteria** before moving on.
 - If a phase depends on **Phase 0** (all phases do), ensure transport/auth is in place first.
 - Keep this file updated if the server OpenAPI or your internal decisions change (e.g. login URL or form format).
+
+
+Medium Priority                                                      
+                                                            
+  - publish.yml doesn't run tests before publishing; no Trusted        
+  Publishing (OIDC)
+  - setup.py is redundant alongside pyproject.toml; author email       
+  differs between them                                                 
+  - docs/api-improvement.md is an internal planning doc (shouldn't be
+  public)                                                              
+  - No dependabot.yml for automated dependency updates      
+                                                                       
+  Low Priority                                              
+
+  - Tighten mypy to strict mode                                        
+  - Replace Windows-only release.bat with a Makefile
+  - Remove openapi.json (tracked despite being in .gitignore)          
+                                                                       
+  ---
+  Recommended order of attack:                                         
+                                                            
+  1. Fix the broken dev install (5 min fix — big impact for
+  contributors)                                                        
+  2. Add missing governance files — SECURITY.md, CODE_OF_CONDUCT.md,
+  CHANGELOG.md                                                         
+  3. GitHub templates — issue/PR templates, dependabot      
+  4. CI improvements — coverage, test-before-publish                   
+  5. Type annotations + test coverage (largest effort)                 
+  6. README overhaul — badges, full examples  

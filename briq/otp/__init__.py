@@ -3,6 +3,13 @@ OTP module for the Briq API — Phase 5.
 All routes under /v1/otp/
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..client import Client
+
 
 class OtpAPI:
     """
@@ -12,12 +19,19 @@ class OtpAPI:
     and checking the status of OTPs.
     """
 
-    def __init__(self, client):
+    def __init__(self, client: Client) -> None:
         self.client = client
 
-    def request(self, phone_number, app_key, sender_id=None,
-                otp_length=6, minutes_to_expire=10,
-                delivery_method="sms", message_template=None):
+    def request(
+        self,
+        phone_number: str,
+        app_key: str,
+        sender_id: str | None = None,
+        otp_length: int = 6,
+        minutes_to_expire: int = 10,
+        delivery_method: str = "sms",
+        message_template: str | None = None,
+    ) -> dict:
         """
         POST /v1/otp/request — request a new OTP.
 
@@ -46,7 +60,7 @@ class OtpAPI:
             data["message_template"] = message_template
         return self.client.post("otp/request", data=data)
 
-    def verify(self, phone_number, app_key, code):
+    def verify(self, phone_number: str, app_key: str, code: str) -> dict:
         """
         POST /v1/otp/verify — verify an OTP code.
 
@@ -64,9 +78,16 @@ class OtpAPI:
             "code": code,
         })
 
-    def resend(self, phone_number, app_key, sender_id=None,
-               otp_length=6, minutes_to_expire=10,
-               delivery_method="sms", message_template=None):
+    def resend(
+        self,
+        phone_number: str,
+        app_key: str,
+        sender_id: str | None = None,
+        otp_length: int = 6,
+        minutes_to_expire: int = 10,
+        delivery_method: str = "sms",
+        message_template: str | None = None,
+    ) -> dict:
         """
         POST /v1/otp/resend — resend an OTP.
 
@@ -95,7 +116,7 @@ class OtpAPI:
             data["message_template"] = message_template
         return self.client.post("otp/resend", data=data)
 
-    def invalidate(self, phone_number, app_key):
+    def invalidate(self, phone_number: str, app_key: str) -> dict:
         """
         POST /v1/otp/invalidate — invalidate any active OTP for a phone number.
 
@@ -111,7 +132,7 @@ class OtpAPI:
             "app_key": app_key,
         })
 
-    def status(self, phone_number, app_key):
+    def status(self, phone_number: str, app_key: str) -> dict:
         """
         GET /v1/otp/status — check OTP status for a phone number.
 

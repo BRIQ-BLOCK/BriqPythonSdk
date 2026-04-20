@@ -3,6 +3,13 @@ Voice calls module for the Briq API — Phase 6.
 All routes under /v1/voice/
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, BinaryIO
+
+if TYPE_CHECKING:
+    from ..client import Client
+
 
 class VoiceAPI:
     """
@@ -11,10 +18,10 @@ class VoiceAPI:
     Provides methods for initiating voice calls using a URL, file upload, or TTS.
     """
 
-    def __init__(self, client):
+    def __init__(self, client: Client) -> None:
         self.client = client
 
-    def call_audio(self, receiver_number, audio_url):
+    def call_audio(self, receiver_number: str, audio_url: str) -> dict:
         """
         POST /v1/voice/calls/audio — initiate a voice call that plays audio from a URL.
 
@@ -30,7 +37,7 @@ class VoiceAPI:
             "audio_url": audio_url,
         })
 
-    def call_audio_upload(self, receiver_number, file):
+    def call_audio_upload(self, receiver_number: str, file: BinaryIO) -> dict:
         """
         POST /v1/voice/calls/audio/upload — upload a local audio file and initiate a call.
 
@@ -47,7 +54,7 @@ class VoiceAPI:
             data={"receiver_number": receiver_number},
         )
 
-    def call_tts(self, receiver_number, text):
+    def call_tts(self, receiver_number: str, text: str) -> dict:
         """
         POST /v1/voice/calls/tts — initiate a voice call that speaks text (TTS).
 

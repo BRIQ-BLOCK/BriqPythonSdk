@@ -22,7 +22,7 @@ class Client:
     Provides access to all API endpoints through dedicated modules.
     """
 
-    def __init__(self, api_key=None, base_url=None):
+    def __init__(self, api_key: str | None = None, base_url: str | None = None) -> None:
         self.config = Config(api_key=api_key, base_url=base_url)
         self.session = requests.Session()
 
@@ -35,7 +35,7 @@ class Client:
         self.voice = VoiceAPI(self)
         self.webhooks = WebhooksAPI(self)
 
-    def _build_url(self, endpoint, prefix="v1"):
+    def _build_url(self, endpoint: str, prefix: str = "v1") -> str:
         """Build the full URL for an API call.
 
         prefix="v1"  → {base_url}/v1/{endpoint}
@@ -47,12 +47,17 @@ class Client:
             return f"{base}/{prefix}/{path}"
         return f"{base}/{path}"
 
-    def _build_headers(self, auth, extra_headers, files):
+    def _build_headers(
+        self,
+        auth: str,
+        extra_headers: dict[str, str] | None,
+        files: dict | None,
+    ) -> dict[str, str]:
         from .exceptions import BriqAuthError
         if auth == "bearer":
             if not self.config.access_token:
                 raise BriqAuthError("Bearer token not set. Call client.login() first.")
-            headers = {
+            headers: dict[str, str] = {
                 "Authorization": f"Bearer {self.config.access_token}",
                 "Content-Type": "application/json",
             }
@@ -69,8 +74,17 @@ class Client:
 
         return headers
 
-    def request(self, method, endpoint, data=None, params=None,
-                prefix="v1", auth="api_key", extra_headers=None, files=None):
+    def request(
+        self,
+        method: str,
+        endpoint: str,
+        data: dict | None = None,
+        params: dict | None = None,
+        prefix: str = "v1",
+        auth: str = "api_key",
+        extra_headers: dict[str, str] | None = None,
+        files: dict | None = None,
+    ) -> dict:
         """
         Make a request to the Briq API.
 
@@ -113,7 +127,7 @@ class Client:
             response.raise_for_status()
 
             if response.content:
-                return response.json()
+                return response.json()  # type: ignore[no-any-return]
             return {}
 
         except requests.exceptions.HTTPError as e:
@@ -121,7 +135,7 @@ class Client:
             if status == 401:
                 raise BriqAuthError("Authentication failed. Check your API key.")
             elif status == 422:
-                detail = []
+                detail: list = []
                 try:
                     detail = response.json().get("detail", [])
                 except Exception:
@@ -135,7 +149,7 @@ class Client:
         except requests.exceptions.RequestException as e:
             raise BriqRequestError(f"Request failed: {str(e)}")
 
-    def login(self, username, password):
+    def login(self, username: str, password: str) -> dict:
         """
         Authenticate with OAuth2 password flow and store the bearer token.
 
@@ -156,7 +170,7 @@ class Client:
                 data={"username": username, "password": password, "grant_type": "password"},
             )
             response.raise_for_status()
-            token_data = response.json()
+            token_data: dict = response.json()
             self.config.access_token = token_data["access_token"]
             return token_data
         except requests.exceptions.HTTPError:
@@ -164,17 +178,45 @@ class Client:
         except requests.exceptions.RequestException as e:
             raise BriqRequestError(f"Login request failed: {str(e)}")
 
-    def get(self, endpoint, params=None, prefix="v1", auth="api_key", extra_headers=None):
+    def get(
+        self,
+        endpoint: str,
+        params: dict | None = None,
+        prefix: str = "v1",
+        auth: str = "api_key",
+        extra_headers: dict[str, str] | None = None,
+    ) -> dict:
         return self.request("GET", endpoint, params=params, prefix=prefix, auth=auth, extra_headers=extra_headers)
 
-    def post(self, endpoint, data=None, prefix="v1", auth="api_key", extra_headers=None, files=None):
+    def post(
+        self,
+        endpoint: str,
+        data: dict | None = None,
+        prefix: str = "v1",
+        auth: str = "api_key",
+        extra_headers: dict[str, str] | None = None,
+        files: dict | None = None,
+    ) -> dict:
         return self.request("POST", endpoint, data=data, prefix=prefix, auth=auth, extra_headers=extra_headers, files=files)
 
-    def patch(self, endpoint, data=None, prefix="v1", auth="api_key", extra_headers=None):
+    def patch(
+        self,
+        endpoint: str,
+        data: dict | None = None,
+        prefix: str = "v1",
+        auth: str = "api_key",
+        extra_headers: dict[str, str] | None = None,
+    ) -> dict:
         return self.request("PATCH", endpoint, data=data, prefix=prefix, auth=auth, extra_headers=extra_headers)
 
-    def delete(self, endpoint, prefix="v1", auth="api_key", extra_headers=None):
+    def delete(
+        self,
+        endpoint: str,
+        prefix: str = "v1",
+        auth: str = "api_key",
+        extra_headers: dict[str, str] | None = None,
+    ) -> dict:
         return self.request("DELETE", endpoint, prefix=prefix, auth=auth, extra_headers=extra_headers)
 
-    def set_api_key(self, api_key):
+    def set_api_key(self, api_key: str) -> None:
         self.config.api_key = api_key
