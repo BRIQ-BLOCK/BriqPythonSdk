@@ -8,7 +8,7 @@ on:
 
 jobs:
   lint:
-    name: Lint (ruff)
+    name: Lint (ruff + mypy)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,6 +31,9 @@ jobs:
 
       - name: Ruff format check
         run: uv run ruff format --check .
+
+      - name: Mypy type check
+        run: uv run mypy briq/ --ignore-missing-imports
 
   test:
     name: Test (Python ${{ matrix.python-version }})

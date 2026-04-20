@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="briq",
-    version="0.1.1.dev1",
+    version="0.2.0",
     author="Briq Team",
     author_email="sms@briq.tz",
     description="Python client for the Briq messaging platform API",
