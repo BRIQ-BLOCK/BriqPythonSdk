@@ -1,19 +1,26 @@
 # Briq Python Client API Reference
 
-This document provides detailed reference information for all classes and methods in the Briq Python client library.
+Complete reference for all public classes and methods.
 
 ## Table of Contents
 
 - [Client](#client)
 - [Config](#config)
+- [MetaAPI](#metaapi)
 - [WorkspaceAPI](#workspaceapi)
 - [CampaignAPI](#campaignapi)
 - [MessageAPI](#messageapi)
+- [DeveloperAppsAPI](#developerappsapi)
+- [OtpAPI](#otpapi)
+- [VoiceAPI](#voiceapi)
+- [WebhooksAPI](#webhooksapi)
 - [Exceptions](#exceptions)
+
+---
 
 ## Client
 
-The `Client` class is the main entry point for interacting with the Briq API.
+Main entry point for interacting with the Briq API.
 
 ### Constructor
 
@@ -21,100 +28,113 @@ The `Client` class is the main entry point for interacting with the Briq API.
 Client(api_key=None, base_url=None)
 ```
 
-**Parameters:**
-- `api_key` (str, optional): API key for authentication. If not provided, will attempt to load from environment.
-- `base_url` (str, optional): Base URL for the API. If not provided, will use the default URL.
+| Parameter  | Type  | Description                                                         |
+|------------|-------|---------------------------------------------------------------------|
+| `api_key`  | `str` | API key. Falls back to `BRIQ_API_KEY` env var then `.env` file.    |
+| `base_url` | `str` | Base URL. Falls back to `BRIQ_BASE_URL` or `http://karibu.briq.tz`.|
 
-### Properties
+### Attributes
 
-- `config`: The configuration object for this client.
-- `workspace`: The workspace API module.
-- `campaign`: The campaign API module.
-- `message`: The message API module.
+| Attribute           | Type                | Description                         |
+|---------------------|---------------------|-------------------------------------|
+| `config`            | `Config`            | Configuration for this client       |
+| `meta`              | `MetaAPI`           | Meta / health-check endpoints       |
+| `workspace`         | `WorkspaceAPI`      | Workspace management                |
+| `campaign`          | `CampaignAPI`       | Campaign management                 |
+| `message`           | `MessageAPI`        | Message sending and history         |
+| `developer_apps`    | `DeveloperAppsAPI`  | Developer app management (Bearer)   |
+| `otp`               | `OtpAPI`            | OTP request / verify                |
+| `voice`             | `VoiceAPI`          | Voice call initiation               |
+| `webhooks`          | `WebhooksAPI`       | Webhook management                  |
 
 ### Methods
+
+#### login
+
+```python
+login(username, password) -> dict
+```
+
+Authenticate with OAuth2 password flow. On success stores the token in `client.config.access_token`; required before calling `developer_apps` endpoints.
+
+| Parameter  | Type  |
+|------------|-------|
+| `username` | `str` |
+| `password` | `str` |
+
+**Returns:** `dict` — token response including `access_token` and `token_type`.  
+**Raises:** `BriqAuthError`, `BriqRequestError`
 
 #### request
 
 ```python
-request(method, endpoint, data=None, params=None)
+request(method, endpoint, data=None, params=None,
+        prefix="v1", auth="api_key",
+        extra_headers=None, files=None) -> dict
 ```
 
-Make a request to the Briq API.
+Low-level request method used internally by all sub-API classes.
 
-**Parameters:**
-- `method` (str): HTTP method (GET, POST, PATCH, etc.)
-- `endpoint` (str): API endpoint path
-- `data` (dict, optional): Request body data
-- `params` (dict, optional): Query parameters
+| Parameter       | Type   | Default      | Description                                          |
+|-----------------|--------|--------------|------------------------------------------------------|
+| `method`        | `str`  | —            | HTTP method: `GET`, `POST`, `PATCH`, `DELETE`        |
+| `endpoint`      | `str`  | —            | Path relative to `prefix`                            |
+| `data`          | `dict` | `None`       | JSON request body (or form fields when using `files`)|
+| `params`        | `dict` | `None`       | Query parameters                                     |
+| `prefix`        | `str`  | `"v1"`       | URL prefix; use `""` for root / non-versioned paths  |
+| `auth`          | `str`  | `"api_key"`  | `"api_key"`, `"bearer"`, or `"none"`                 |
+| `extra_headers` | `dict` | `None`       | Additional headers merged into the request           |
+| `files`         | `dict` | `None`       | Files for multipart upload (removes `Content-Type`)  |
 
-**Returns:**
-- `dict`: Response data
-
-**Raises:**
-- `BriqAPIError`: If the API returns an error
-- `BriqAuthError`: If authentication fails
-- `BriqRequestError`: If the request fails
+**Returns:** `dict` — parsed JSON body, or `{}` for 204 responses.  
+**Raises:** `BriqAuthError`, `BriqValidationError`, `BriqAPIError`, `BriqRequestError`
 
 #### get
 
 ```python
-get(endpoint, params=None)
+get(endpoint, params=None, prefix="v1", auth="api_key", extra_headers=None) -> dict
 ```
 
-Convenience method for GET requests.
-
-**Parameters:**
-- `endpoint` (str): API endpoint path
-- `params` (dict, optional): Query parameters
-
-**Returns:**
-- `dict`: Response data
+Convenience wrapper for GET requests.
 
 #### post
 
 ```python
-post(endpoint, data=None)
+post(endpoint, data=None, prefix="v1", auth="api_key",
+     extra_headers=None, files=None) -> dict
 ```
 
-Convenience method for POST requests.
-
-**Parameters:**
-- `endpoint` (str): API endpoint path
-- `data` (dict, optional): Request body data
-
-**Returns:**
-- `dict`: Response data
+Convenience wrapper for POST requests.
 
 #### patch
 
 ```python
-patch(endpoint, data=None)
+patch(endpoint, data=None, prefix="v1", auth="api_key", extra_headers=None) -> dict
 ```
 
-Convenience method for PATCH requests.
+Convenience wrapper for PATCH requests.
 
-**Parameters:**
-- `endpoint` (str): API endpoint path
-- `data` (dict, optional): Request body data
+#### delete
 
-**Returns:**
-- `dict`: Response data
+```python
+delete(endpoint, prefix="v1", auth="api_key", extra_headers=None) -> dict
+```
+
+Convenience wrapper for DELETE requests.
 
 #### set_api_key
 
 ```python
-set_api_key(api_key)
+set_api_key(api_key) -> None
 ```
 
-Set the API key for authentication.
+Update the API key. Equivalent to `client.config.api_key = api_key`.
 
-**Parameters:**
-- `api_key` (str): The API key to use
+---
 
 ## Config
 
-The `Config` class handles configuration for the Briq client.
+Manages runtime configuration.
 
 ### Constructor
 
@@ -122,239 +142,525 @@ The `Config` class handles configuration for the Briq client.
 Config(api_key=None, base_url=None)
 ```
 
-**Parameters:**
-- `api_key` (str, optional): API key for authentication. If not provided, will attempt to load from environment.
-- `base_url` (str, optional): Base URL for the API. If not provided, will use the default URL.
+Loads `.env` from the current directory automatically.
 
 ### Properties
 
-#### api_key
+| Property       | Type           | Description                                                 |
+|----------------|----------------|-------------------------------------------------------------|
+| `api_key`      | `str \| None`  | Read/write. API key for `X-API-Key` header.                 |
+| `base_url`     | `str`          | Read/write. Base URL for all requests.                      |
+| `access_token` | `str \| None`  | Read/write. OAuth2 Bearer token; set automatically by `login()`. |
+| `headers`      | `dict`         | Read-only. Returns `{"X-API-Key": ..., "Content-Type": "application/json"}`. Raises `ValueError` if `api_key` is not set. |
 
-Get or set the API key.
+---
 
-#### base_url
+## MetaAPI
 
-Get or set the base URL.
+`client.meta`
 
-#### headers
+No authentication required for `hello` and `get_version`.
 
-Get the headers for API requests.
+### Methods
 
-**Returns:**
-- `dict`: Headers including the API key.
+#### hello
 
-**Raises:**
-- `ValueError`: If API key is not set.
+```python
+hello() -> dict
+```
+
+`GET /` — health check / landing page info.
+
+#### get_version
+
+```python
+get_version() -> dict
+```
+
+`GET /version` — API version and deployment information.
+
+#### developer_stats
+
+```python
+developer_stats() -> dict
+```
+
+`GET /karibu/x-api-key` — verify API key and return developer statistics. Requires `api_key` auth.
+
+---
 
 ## WorkspaceAPI
 
-The `WorkspaceAPI` class provides methods for managing workspaces.
+`client.workspace`
 
 ### Methods
 
 #### create
 
 ```python
-create(name, description=None)
+create(name, description=None, developer_access=False) -> dict
 ```
 
-Create a new workspace.
+`POST /v1/workspace/create/`
 
-**Parameters:**
-- `name` (str): Name of the workspace
-- `description` (str, optional): Description of the workspace
-
-**Returns:**
-- `dict`: Created workspace data
+| Parameter          | Type   | Default | Description                          |
+|--------------------|--------|---------|--------------------------------------|
+| `name`             | `str`  | —       | Workspace name                       |
+| `description`      | `str`  | `None`  | Optional description                 |
+| `developer_access` | `bool` | `False` | Enable developer access for the workspace |
 
 #### list
 
 ```python
-list()
+list() -> dict
 ```
 
-List all workspaces.
-
-**Returns:**
-- `list`: List of workspaces
+`GET /v1/workspace/all/`
 
 #### get
 
 ```python
-get(workspace_id)
+get(workspace_id) -> dict
 ```
 
-Get a workspace by ID.
-
-**Parameters:**
-- `workspace_id` (str): ID of the workspace to retrieve
-
-**Returns:**
-- `dict`: Workspace data
+`GET /v1/workspace/{workspace_id}`
 
 #### update
 
 ```python
-update(workspace_id, name=None, description=None)
+update(workspace_id, name=None, description=None, developer_access=None) -> dict
 ```
 
-Update a workspace.
+`PATCH /v1/workspace/update/{workspace_id}` — only supplied fields are updated.
 
-**Parameters:**
-- `workspace_id` (str): ID of the workspace to update
-- `name` (str, optional): New name for the workspace
-- `description` (str, optional): New description for the workspace
-
-**Returns:**
-- `dict`: Updated workspace data
+---
 
 ## CampaignAPI
 
-The `CampaignAPI` class provides methods for managing campaigns.
+`client.campaign`
 
 ### Methods
 
 #### create
 
 ```python
-create(workspace_id, name, description=None, launch_date=None)
+create(workspace_id, name, description=None, launch_date=None) -> dict
 ```
 
-Create a new campaign.
+`POST /v1/campaign/create/`
 
-**Parameters:**
-- `workspace_id` (str): ID of the workspace to create the campaign in
-- `name` (str): Name of the campaign
-- `description` (str, optional): Description of the campaign
-- `launch_date` (str, optional): Launch date of the campaign in ISO format (e.g., "2023-12-01T00:00:00")
-
-**Returns:**
-- `dict`: Created campaign data
+| Parameter      | Type  | Description                            |
+|----------------|-------|----------------------------------------|
+| `workspace_id` | `str` | Workspace to create the campaign in    |
+| `name`         | `str` | Campaign name                          |
+| `description`  | `str` | Optional description                   |
+| `launch_date`  | `str` | ISO 8601 datetime (e.g. `"2025-12-01T00:00:00"`) |
 
 #### list
 
 ```python
-list()
+list() -> dict
 ```
 
-List all campaigns.
-
-**Returns:**
-- `list`: List of campaigns
+`GET /v1/campaign/all/`
 
 #### get
 
 ```python
-get(campaign_id)
+get(campaign_id) -> dict
 ```
 
-Get a campaign by ID.
-
-**Parameters:**
-- `campaign_id` (str): ID of the campaign to retrieve
-
-**Returns:**
-- `dict`: Campaign data
+`GET /v1/campaign/{campaign_id}/`
 
 #### update
 
 ```python
-update(campaign_id, name=None, description=None, launch_date=None)
+update(campaign_id, name=None, description=None, launch_date=None) -> dict
 ```
 
-Update a campaign.
+`PATCH /v1/campaign/update/{campaign_id}` — only supplied fields are updated.
 
-**Parameters:**
-- `campaign_id` (str): ID of the campaign to update
-- `name` (str, optional): New name for the campaign
-- `description` (str, optional): New description for the campaign
-- `launch_date` (str, optional): New launch date in ISO format
-
-**Returns:**
-- `dict`: Updated campaign data
+---
 
 ## MessageAPI
 
-The `MessageAPI` class provides methods for sending and managing messages.
+`client.message`
 
 ### Methods
 
 #### send_instant
 
 ```python
-send_instant(content, recipients, sender_id, campaign_id=None)
+send_instant(content, recipients, sender_id,
+             campaign_id=None, groups=None, flash=False,
+             send_at=None, app_id=None) -> dict
 ```
 
-Send an instant message.
+`POST /v1/message/send-instant`
 
-**Parameters:**
-- `content` (str): Message content
-- `recipients` (list): List of recipient phone numbers
-- `sender_id` (str): Registered sender ID name
-- `campaign_id` (str, optional): Campaign ID to associate the message with
+| Parameter     | Type         | Default | Description                                              |
+|---------------|--------------|---------|----------------------------------------------------------|
+| `content`     | `str`        | —       | Message text                                             |
+| `recipients`  | `list[str]`  | —       | Phone numbers                                            |
+| `sender_id`   | `str`        | —       | Registered sender ID (2–13 characters)                   |
+| `campaign_id` | `str`        | `None`  | Associate with a campaign                                |
+| `groups`      | `list[str]`  | `None`  | Also send to these contact group IDs                     |
+| `flash`       | `bool`       | `False` | Send as a flash message                                  |
+| `send_at`     | `str`        | `None`  | ISO 8601 UTC schedule time (e.g. `"2025-12-01T10:00:00Z"`) |
+| `app_id`      | `str`        | `None`  | Developer app ID — passed as `X-App-ID` header           |
 
-**Returns:**
-- `dict`: Message sending result
+**Returns:** `dict` — includes `job_id`, `status`, `message`, `stats`, `meta`.
 
 #### send_campaign
 
 ```python
-send_campaign(campaign_id, group_id, content, sender_id)
+send_campaign(campaign_id, content, sender_id,
+              start_date=None, end_date=None,
+              frequency=None, app_id=None) -> dict
 ```
 
-Send a campaign message.
+`POST /v1/message/send-campaign` — send to all contacts in a campaign.
 
-**Parameters:**
-- `campaign_id` (str): ID of the campaign
-- `group_id` (str): ID of the recipient group
-- `content` (str): Message content
-- `sender_id` (str): Registered sender ID name
-
-**Returns:**
-- `dict`: Message sending result
+| Parameter     | Type  | Default | Description                                              |
+|---------------|-------|---------|----------------------------------------------------------|
+| `campaign_id` | `str` | —       | Campaign ID                                              |
+| `content`     | `str` | —       | Message text                                             |
+| `sender_id`   | `str` | —       | Registered sender ID (2–13 characters)                   |
+| `start_date`  | `str` | `None`  | ISO 8601 datetime for when sending starts                |
+| `end_date`    | `str` | `None`  | ISO 8601 datetime for when sending ends                  |
+| `frequency`   | `str` | `None`  | One of `once`, `hourly`, `daily`, `weekly`, `monthly`   |
+| `app_id`      | `str` | `None`  | Developer app ID — passed as `X-App-ID` header           |
 
 #### get_logs
 
 ```python
-get_logs()
+get_logs() -> dict
 ```
 
-Get message logs.
-
-**Returns:**
-- `list`: Message logs
+`GET /v1/message/logs`
 
 #### get_history
 
 ```python
-get_history()
+get_history() -> dict
 ```
 
-Get user message history.
+`GET /v1/message/history`
 
-**Returns:**
-- `list`: Message history
+#### get_history_by_recipient
+
+```python
+get_history_by_recipient(recipient) -> dict
+```
+
+`GET /v1/message/history/recipient/{recipient}`
+
+| Parameter   | Type  | Description        |
+|-------------|-------|--------------------|
+| `recipient` | `str` | Recipient phone number |
+
+#### get_message_log
+
+```python
+get_message_log(message_id) -> dict
+```
+
+`GET /v1/message/message-log/{message_id}`
+
+---
+
+## DeveloperAppsAPI
+
+`client.developer_apps`
+
+All methods require Bearer auth. Call `client.login()` before using.
+
+### Methods
+
+#### list
+
+```python
+list() -> dict
+```
+
+`GET /developer-apps/`
+
+#### create
+
+```python
+create(app_name, app_description=None, workspace_id=None) -> dict
+```
+
+`POST /developer-apps/`
+
+#### get
+
+```python
+get(app_id) -> dict
+```
+
+`GET /developer-apps/{app_id}`
+
+#### get_by_key
+
+```python
+get_by_key(app_key) -> dict
+```
+
+`GET /developer-apps/by-key/{app_key}`
+
+#### update
+
+```python
+update(app_id, app_name=None, app_description=None, workspace_id=None) -> dict
+```
+
+`PATCH /developer-apps/{app_id}` — only supplied fields are updated.
+
+#### delete
+
+```python
+delete(app_id) -> dict
+```
+
+`DELETE /developer-apps/{app_id}` — returns `{}` on success (204).
+
+#### list_by_workspace
+
+```python
+list_by_workspace(workspace_id) -> dict
+```
+
+`GET /workspaces/{workspace_id}/developer-apps`
+
+#### transfer
+
+```python
+transfer(app_id, workspace_id) -> dict
+```
+
+`POST /developer-apps/{app_id}/transfer` — move app to another workspace.
+
+#### attach_api_key
+
+```python
+attach_api_key(app_id, api_key_id) -> dict
+```
+
+`POST /developer-apps/{app_id}/api-keys/{api_key_id}/attach`
+
+#### stats
+
+```python
+stats(app_id) -> dict
+```
+
+`GET /developer-apps/{app_id}/stats`
+
+#### list_api_keys
+
+```python
+list_api_keys(app_id) -> dict
+```
+
+`GET /developer-apps/{app_id}/api-keys`
+
+---
+
+## OtpAPI
+
+`client.otp`
+
+### Methods
+
+#### request
+
+```python
+request(phone_number, app_key, sender_id=None,
+        otp_length=6, minutes_to_expire=10,
+        delivery_method="sms", message_template=None) -> dict
+```
+
+`POST /v1/otp/request`
+
+| Parameter           | Type  | Default  | Description                                    |
+|---------------------|-------|----------|------------------------------------------------|
+| `phone_number`      | `str` | —        | Recipient phone number                         |
+| `app_key`           | `str` | —        | Developer app key                              |
+| `sender_id`         | `str` | `None`   | SMS sender ID (defaults to "BRIQ OTP")         |
+| `otp_length`        | `int` | `6`      | OTP code length                                |
+| `minutes_to_expire` | `int` | `10`     | Expiry in minutes                              |
+| `delivery_method`   | `str` | `"sms"`  | `"sms"` or `"call"`                            |
+| `message_template`  | `str` | `None`   | Custom template — use `{code}` as placeholder  |
+
+#### verify
+
+```python
+verify(phone_number, app_key, code) -> dict
+```
+
+`POST /v1/otp/verify`
+
+#### resend
+
+```python
+resend(phone_number, app_key, sender_id=None,
+       otp_length=6, minutes_to_expire=10,
+       delivery_method="sms", message_template=None) -> dict
+```
+
+`POST /v1/otp/resend` — same parameters as `request`.
+
+#### invalidate
+
+```python
+invalidate(phone_number, app_key) -> dict
+```
+
+`POST /v1/otp/invalidate` — cancel any active OTP for the phone number.
+
+#### status
+
+```python
+status(phone_number, app_key) -> dict
+```
+
+`GET /v1/otp/status`
+
+---
+
+## VoiceAPI
+
+`client.voice`
+
+### Methods
+
+#### call_audio
+
+```python
+call_audio(receiver_number, audio_url) -> dict
+```
+
+`POST /v1/voice/calls/audio` — initiate a call that plays audio from a public URL (MP3 or WAV).
+
+#### call_audio_upload
+
+```python
+call_audio_upload(receiver_number, file) -> dict
+```
+
+`POST /v1/voice/calls/audio/upload` — upload a local audio file (MP3 or WAV) and initiate a call. `file` must be an open binary file-like object.
+
+#### call_tts
+
+```python
+call_tts(receiver_number, text) -> dict
+```
+
+`POST /v1/voice/calls/tts` — initiate a call that reads `text` to the recipient via text-to-speech.
+
+---
+
+## WebhooksAPI
+
+`client.webhooks`
+
+### Methods
+
+#### create
+
+```python
+create(app_id, service_type, url, secret_token=None) -> dict
+```
+
+`POST /v1/webhooks/`
+
+| Parameter      | Type  | Description                                            |
+|----------------|-------|--------------------------------------------------------|
+| `app_id`       | `str` | Developer app UUID                                     |
+| `service_type` | `str` | One of `sms`, `voice`, `otp`, `whatsapp`, `email`     |
+| `url`          | `str` | Endpoint that will receive webhook events              |
+| `secret_token` | `str` | Signing secret — minimum 16 characters (optional)      |
+
+**Note:** `secret_token` may be masked in responses.
+
+#### list
+
+```python
+list() -> dict
+```
+
+`GET /v1/webhooks/all`
+
+#### list_by_app
+
+```python
+list_by_app(app_id) -> dict
+```
+
+`GET /v1/webhooks/app/{app_id}`
+
+#### get
+
+```python
+get(webhook_id) -> dict
+```
+
+`GET /v1/webhooks/{webhook_id}`
+
+#### update
+
+```python
+update(webhook_id, service_type=None, url=None, secret_token=None) -> dict
+```
+
+`PATCH /v1/webhooks/{webhook_id}` — only supplied fields are updated.
+
+#### delete
+
+```python
+delete(webhook_id) -> dict
+```
+
+`DELETE /v1/webhooks/{webhook_id}` — returns `{}` on success (204).
+
+---
 
 ## Exceptions
 
-The Briq client library defines several exception classes for error handling.
+All exceptions live in `briq.exceptions` and inherit from `BriqError`.
 
-### BriqError
+```python
+from briq.exceptions import (
+    BriqError,
+    BriqAuthError,
+    BriqAPIError,
+    BriqRequestError,
+    BriqConfigError,
+    BriqValidationError,
+)
+```
 
-Base exception for all Briq-related errors.
+| Exception             | HTTP Status | Description                                              |
+|-----------------------|-------------|----------------------------------------------------------|
+| `BriqError`           | —           | Base class for all Briq exceptions                       |
+| `BriqAuthError`       | 401         | Authentication failed — invalid or missing credentials   |
+| `BriqValidationError` | 422         | Field-level validation failure; see `.detail` below      |
+| `BriqAPIError`        | 400 / other | API returned an error                                    |
+| `BriqRequestError`    | —           | Network or transport failure                             |
+| `BriqConfigError`     | —           | Configuration problem (e.g. missing API key)             |
 
-### BriqAuthError
+### BriqValidationError
 
-Raised when authentication fails.
+```python
+class BriqValidationError(BriqError):
+    detail: list  # field-level error dicts from the 422 response body
+```
 
-### BriqAPIError
-
-Raised when the API returns an error.
-
-### BriqRequestError
-
-Raised when a request to the API fails.
-
-### BriqConfigError
-
-Raised when there's a configuration error.
+```python
+try:
+    client.message.send_instant(content="", recipients=[], sender_id="X")
+except BriqValidationError as e:
+    print(e)         # human-readable summary
+    print(e.detail)  # list of {"loc": [...], "msg": "...", "type": "..."} dicts
+```

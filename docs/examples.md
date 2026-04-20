@@ -1,195 +1,265 @@
 # Briq Python Client Examples
 
-This document provides practical examples of using the Briq Python client library for common tasks.
+Practical, runnable examples for common Briq integration patterns.
 
 ## Basic Setup
 
 ```python
 import briq
-import os
-from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
-
-# Initialize the client
+# Reads BRIQ_API_KEY (and optionally BRIQ_BASE_URL) from environment or .env
 client = briq.Client()
-
-# Check if API key is set
-print(f"API key is {'set' if client.config.api_key else 'not set'}")
 ```
 
-## Complete Workflow Example
+---
 
-This example demonstrates a complete workflow for creating a workspace, creating a campaign, and sending messages.
+## Workspace → Campaign → Message Flow
 
 ```python
 import briq
-import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
-# Initialize the client
 client = briq.Client()
 
 # 1. Create a workspace
 workspace = client.workspace.create(
     name="Marketing Workspace",
-    description="Workspace for marketing campaigns"
+    description="Workspace for marketing campaigns",
 )
 workspace_id = workspace["id"]
-print(f"Created workspace: {workspace['name']} (ID: {workspace_id})")
+print("Workspace:", workspace)
 
 # 2. Create a campaign in the workspace
-launch_date = (datetime.now() + timedelta(days=7)).isoformat()
+launch_date = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
 campaign = client.campaign.create(
     workspace_id=workspace_id,
     name="Product Launch Campaign",
     description="Campaign for new product launch",
-    launch_date=launch_date
+    launch_date=launch_date,
 )
 campaign_id = campaign["id"]
-print(f"Created campaign: {campaign['name']} (ID: {campaign_id})")
+print("Campaign:", campaign)
 
-# 3. Send an instant message
+# 3. Send an instant message associated with the campaign
 result = client.message.send_instant(
-    content="Hello! We're excited to announce our new product launch next week.",
+    content="We're excited to announce our new product launch!",
     recipients=["255788344348", "255712345678"],
     sender_id="COMPANY",
-    campaign_id=campaign_id
+    campaign_id=campaign_id,
 )
-print(f"Sent instant message with ID: {result['message_id']}")
+print("Send result:", result)
 
-# 4. Get message logs
-logs = client.message.get_logs()
-print(f"Retrieved {len(logs)} message logs")
+# 4. Send to all contacts in the campaign
+campaign_send = client.message.send_campaign(
+    campaign_id=campaign_id,
+    content="Campaign broadcast content",
+    sender_id="COMPANY",
+    frequency="once",
+)
+print("Campaign send:", campaign_send)
 ```
 
-## Error Handling Example
+---
 
-This example demonstrates how to handle different types of errors that might occur when using the Briq client.
+## Error Handling
 
 ```python
 import briq
-from briq.exceptions import BriqAuthError, BriqAPIError, BriqRequestError, BriqConfigError
+from briq.exceptions import (
+    BriqAuthError,
+    BriqAPIError,
+    BriqRequestError,
+    BriqValidationError,
+)
 
-# Try with invalid API key
+client = briq.Client()
+
 try:
-    client = briq.Client(api_key="invalid_api_key")
-    workspaces = client.workspace.list()
+    result = client.message.send_instant(
+        content="Hello!",
+        recipients=["255788344348"],
+        sender_id="TEST",
+    )
+    print(result)
 except BriqAuthError as e:
-    print(f"Authentication error: {e}")
-    # Handle authentication error (e.g., prompt for new API key)
-    client.set_api_key(input("Enter valid API key: "))
-
-# Try with valid API key but invalid request
-try:
-    # Attempt to create a workspace with missing required fields
-    workspace = client.workspace.create(name="")
+    print(f"Auth error: {e}")
+except BriqValidationError as e:
+    print(f"Validation error: {e}")
+    # e.detail contains field-level errors from the 422 response
+    for err in e.detail:
+        print(" ", err)
 except BriqAPIError as e:
     print(f"API error: {e}")
-    # Handle API error (e.g., fix request data)
-    workspace = client.workspace.create(name="Fixed Workspace Name")
-
-# Try with network issues
-try:
-    # Set invalid base URL to simulate network issue
-    client.config.base_url = "http://invalid-url"
-    workspaces = client.workspace.list()
 except BriqRequestError as e:
-    print(f"Request error: {e}")
-    # Handle request error (e.g., retry with correct URL)
-    client.config.base_url = "http://karibu.briq.tz"
-    workspaces = client.workspace.list()
+    print(f"Network error: {e}")
 ```
 
-## Working with Multiple Workspaces
+---
 
-This example demonstrates how to manage multiple workspaces and campaigns.
+## Login + Developer Apps
 
 ```python
 import briq
 
-# Initialize the client
 client = briq.Client()
 
-# List all workspaces
-workspaces = client.workspace.list()
-print(f"Found {len(workspaces)} workspaces")
+# Authenticate — stores Bearer token in client.config.access_token
+client.login(username="user@example.com", password="secret")
 
-# Create a new campaign in each workspace
-for workspace in workspaces:
-    workspace_id = workspace["id"]
-    campaign = client.campaign.create(
-        workspace_id=workspace_id,
-        name=f"Campaign for {workspace['name']}",
-        description=f"Automatically created campaign for {workspace['name']}"
+# List all developer apps
+apps = client.developer_apps.list()
+print("Apps:", apps)
+
+# Create a new app
+app = client.developer_apps.create(
+    app_name="SMS Notifier",
+    app_description="App for delivery notifications",
+)
+print("Created app:", app)
+```
+
+---
+
+## OTP Request and Verify
+
+```python
+import briq
+
+client = briq.Client()
+APP_KEY = "your-app-key"
+
+# Request an OTP
+result = client.otp.request(
+    phone_number="+255712345678",
+    app_key=APP_KEY,
+    sender_id="MYAPP",
+    otp_length=6,
+    minutes_to_expire=10,
+)
+print("OTP request:", result)
+
+# Verify the OTP (code entered by the user)
+code = input("Enter OTP code: ")
+verify = client.otp.verify(
+    phone_number="+255712345678",
+    app_key=APP_KEY,
+    code=code,
+)
+print("Verify result:", verify)
+```
+
+---
+
+## Voice Call — TTS
+
+```python
+import briq
+
+client = briq.Client()
+
+result = client.voice.call_tts(
+    receiver_number="255788344348",
+    text="Hello, your order has been confirmed and will arrive tomorrow.",
+)
+print(result)
+```
+
+## Voice Call — Audio URL
+
+```python
+import briq
+
+client = briq.Client()
+
+result = client.voice.call_audio(
+    receiver_number="255788344348",
+    audio_url="https://example.com/notification.mp3",
+)
+print(result)
+```
+
+## Voice Call — File Upload
+
+```python
+import briq
+
+client = briq.Client()
+
+with open("notification.mp3", "rb") as f:
+    result = client.voice.call_audio_upload(
+        receiver_number="255788344348",
+        file=f,
     )
-    print(f"Created campaign {campaign['name']} in workspace {workspace['name']}")
-
-# List all campaigns
-campaigns = client.campaign.list()
-print(f"Total campaigns: {len(campaigns)}")
+print(result)
 ```
 
-## Sending Messages to Multiple Recipients
+---
 
-This example demonstrates how to send messages to multiple recipients.
+## Webhooks — Create and List
 
 ```python
 import briq
-import csv
 
-# Initialize the client
 client = briq.Client()
 
-# Load recipients from a CSV file
-recipients = []
-with open('recipients.csv', 'r') as file:
-    reader = csv.reader(file)
-    next(reader)  # Skip header row
-    for row in reader:
-        recipients.append(row[0])  # Assuming phone numbers are in the first column
-
-print(f"Loaded {len(recipients)} recipients")
-
-# Send a message to all recipients
-result = client.message.send_instant(
-    content="Thank you for subscribing to our newsletter!",
-    recipients=recipients,
-    sender_id="NEWSLETTER"
+# Create a webhook for an existing developer app
+webhook = client.webhooks.create(
+    app_id="developer-app-uuid",
+    service_type="sms",
+    url="https://your-app.example.com/webhook/sms",
+    secret_token="supersecret_min_16_chars",
 )
-print(f"Message sent to {len(recipients)} recipients")
+print("Created webhook:", webhook)
+
+# List all webhooks
+all_webhooks = client.webhooks.list()
+print("All webhooks:", all_webhooks)
+
+# List webhooks for a specific app
+app_webhooks = client.webhooks.list_by_app("developer-app-uuid")
+print("App webhooks:", app_webhooks)
 ```
 
-## Environment Configuration
+---
 
-This example demonstrates different ways to configure the client using environment variables.
+## Scheduled Message
 
 ```python
 import briq
-import os
-from dotenv import load_dotenv
 
-# Example .env file:
-# BRIQ_API_KEY=your_api_key_here
-# BRIQ_BASE_URL=http://custom-url:8000
+client = briq.Client()
 
-# Method 1: Load from .env file
-load_dotenv()
-client1 = briq.Client()
-
-# Method 2: Set environment variables programmatically
-os.environ["BRIQ_API_KEY"] = "your_api_key_here"
-client2 = briq.Client()
-
-# Method 3: Pass values directly
-client3 = briq.Client(
-    api_key="your_api_key_here",
-    base_url="http://custom-url:8000"
+result = client.message.send_instant(
+    content="Reminder: Your appointment is tomorrow at 10am.",
+    recipients=["255788344348"],
+    sender_id="CLINIC",
+    send_at="2025-12-01T07:00:00Z",  # ISO 8601 UTC
 )
+print(result)
+```
 
-# Method 4: Set values after initialization
-client4 = briq.Client()
-client4.config.api_key = "your_api_key_here"
-client4.config.base_url = "http://custom-url:8000"
+---
+
+## Message History and Logs
+
+```python
+import briq
+
+client = briq.Client()
+
+# All message history
+history = client.message.get_history()
+print(history)
+
+# History for a specific recipient
+recipient_history = client.message.get_history_by_recipient("+255788344348")
+print(recipient_history)
+
+# All message logs
+logs = client.message.get_logs()
+print(logs)
+
+# Detail for one message
+detail = client.message.get_message_log("message-uuid")
+print(detail)
 ```
