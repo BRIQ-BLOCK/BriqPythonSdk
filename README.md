@@ -63,7 +63,7 @@ result = client.message.send_instant(
 
 ## Documentation
 
-For detailed documentation and examples, please refer to the [Official Usage Guide](https://briq.tz/documentation/home)
+For detailed documentation and examples, please refer to the [Official Usage Guide](https://docs.briq.tz)
 
 ## License
 

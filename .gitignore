@@ -65,3 +65,4 @@ venv.bak/
 *.swp
 *.swo
 .DS_Store
+openapi.json
