@@ -21,3 +21,10 @@ class BriqRequestError(BriqError):
 class BriqConfigError(BriqError):
     """Raised when there's a configuration error."""
     pass
+
+class BriqValidationError(BriqError):
+    """Raised when the API returns a 422 validation error."""
+
+    def __init__(self, message, detail=None):
+        super().__init__(message)
+        self.detail = detail or []

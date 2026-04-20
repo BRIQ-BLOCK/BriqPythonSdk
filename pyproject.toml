@@ -29,3 +29,9 @@ dependencies = [
 [project.urls]
 "Homepage" = "https://github.com/BRIQ-BLOCK/BriqPythonSdk"
 "Bug Tracker" = "https://github.com/BRIQ-BLOCK/BriqPythonSdk/issues"
+
+[dependency-groups]
+dev = [
+    "pytest>=7.4.4",
+    "ruff>=0.15.11",
+]

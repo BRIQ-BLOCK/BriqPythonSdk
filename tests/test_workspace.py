@@ -1,125 +1,98 @@
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 import os
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from briq.workspace import WorkspaceAPI
 
+
 class TestWorkspaceAPI(unittest.TestCase):
     def setUp(self):
-        # Create a mock client
         self.mock_client = MagicMock()
         self.workspace_api = WorkspaceAPI(self.mock_client)
-    
+
     def test_init(self):
-        # Test initialization
         self.assertIsNotNone(self.workspace_api)
         self.assertEqual(self.workspace_api.client, self.mock_client)
-    
-    def test_create(self):
-        # Test create method
-        self.workspace_api.create("Test Workspace", "Test Description")
-        
-        # Verify client.post was called with correct arguments
-        self.mock_client.post.assert_called_once_with(
-            "workspace/create/",
-            data={"name": "Test Workspace", "description": "Test Description"}
-        )
-        
-        # Test create with only name
-        self.mock_client.post.reset_mock()
+
+    def test_create_name_only(self):
         self.workspace_api.create("Test Workspace")
-        
-        # Verify client.post was called with correct arguments
         self.mock_client.post.assert_called_once_with(
             "workspace/create/",
-            data={"name": "Test Workspace"}
+            data={"name": "Test Workspace", "developer_access": False},
         )
-    
+
+    def test_create_with_description(self):
+        self.workspace_api.create("Test Workspace", description="Test Description")
+        self.mock_client.post.assert_called_once_with(
+            "workspace/create/",
+            data={"name": "Test Workspace", "developer_access": False, "description": "Test Description"},
+        )
+
+    def test_create_with_developer_access(self):
+        self.workspace_api.create("Dev Workspace", developer_access=True)
+        self.mock_client.post.assert_called_once_with(
+            "workspace/create/",
+            data={"name": "Dev Workspace", "developer_access": True},
+        )
+
     def test_list(self):
-        # Mock response
         mock_response = [
-            {"id": "workspace-1", "name": "Workspace 1"},
-            {"id": "workspace-2", "name": "Workspace 2"}
+            {"workspace_id": "workspace-1", "name": "Workspace 1"},
+            {"workspace_id": "workspace-2", "name": "Workspace 2"},
         ]
         self.mock_client.get.return_value = mock_response
-        
-        # Test list method
         result = self.workspace_api.list()
-        
-        # Verify client.get was called with correct arguments
         self.mock_client.get.assert_called_once_with("workspace/all/")
-        
-        # Verify result
         self.assertEqual(result, mock_response)
-    
+
     def test_get(self):
-        # Mock response
-        mock_response = {"id": "workspace-1", "name": "Workspace 1"}
+        mock_response = {"workspace_id": "workspace-1", "name": "Workspace 1"}
         self.mock_client.get.return_value = mock_response
-        
-        # Test get method
         result = self.workspace_api.get("workspace-1")
-        
-        # Verify client.get was called with correct arguments
         self.mock_client.get.assert_called_once_with("workspace/workspace-1")
-        
-        # Verify result
         self.assertEqual(result, mock_response)
-    
-    def test_update(self):
-        # Test update method with both name and description
-        self.workspace_api.update("workspace-1", "Updated Name", "Updated Description")
-        
-        # Verify client.patch was called with correct arguments
+
+    def test_update_name_and_description(self):
+        self.workspace_api.update("workspace-1", name="Updated Name", description="Updated Description")
         self.mock_client.patch.assert_called_once_with(
             "workspace/update/workspace-1",
-            data={"name": "Updated Name", "description": "Updated Description"}
+            data={"name": "Updated Name", "description": "Updated Description"},
         )
-        
-        # Test update with only name
-        self.mock_client.patch.reset_mock()
-        self.workspace_api.update("workspace-1", "Updated Name")
-        
-        # Verify client.patch was called with correct arguments
+
+    def test_update_name_only(self):
+        self.workspace_api.update("workspace-1", name="Updated Name")
         self.mock_client.patch.assert_called_once_with(
             "workspace/update/workspace-1",
-            data={"name": "Updated Name"}
+            data={"name": "Updated Name"},
         )
-        
-        # Test update with only description
-        self.mock_client.patch.reset_mock()
-        self.workspace_api.update("workspace-1", description="Updated Description")
-        
-        # Verify client.patch was called with correct arguments
+
+    def test_update_developer_access(self):
+        self.workspace_api.update("workspace-1", developer_access=True)
         self.mock_client.patch.assert_called_once_with(
             "workspace/update/workspace-1",
-            data={"description": "Updated Description"}
+            data={"developer_access": True},
         )
-        
-        # Test update with no changes
-        self.mock_client.patch.reset_mock()
+
+    def test_update_no_changes(self):
         self.workspace_api.update("workspace-1")
-        
-        # Verify client.patch was called with correct arguments
         self.mock_client.patch.assert_called_once_with(
             "workspace/update/workspace-1",
-            data={}
+            data={},
         )
 
     def test_invalid_workspace_id(self):
-        # Test get with invalid workspace_id
         self.mock_client.get.side_effect = Exception("Workspace not found")
         with self.assertRaises(Exception) as context:
             self.workspace_api.get("invalid-id")
         self.assertEqual(str(context.exception), "Workspace not found")
 
     def test_empty_workspace_list(self):
-        # Test list with no workspaces
         self.mock_client.get.return_value = []
         result = self.workspace_api.list()
         self.assertEqual(result, [])
+
 
 if __name__ == '__main__':
     unittest.main()

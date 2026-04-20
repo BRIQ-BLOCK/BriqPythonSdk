@@ -31,6 +31,7 @@ class Config:
         
         self._api_key = api_key or os.environ.get('BRIQ_API_KEY')
         self._base_url = base_url or os.environ.get('BRIQ_BASE_URL', 'http://karibu.briq.tz')
+        self._access_token = None
     
     @property
     def api_key(self):
@@ -52,6 +53,16 @@ class Config:
         """Set the base URL."""
         self._base_url = value
     
+    @property
+    def access_token(self):
+        """Get the OAuth2 bearer access token."""
+        return self._access_token
+
+    @access_token.setter
+    def access_token(self, value):
+        """Set the OAuth2 bearer access token."""
+        self._access_token = value
+
     @property
     def headers(self):
         """
