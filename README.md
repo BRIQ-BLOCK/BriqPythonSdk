@@ -4,7 +4,7 @@ Official Python client library for the Briq messaging platform API.
 
 ## Overview
 
-The Briq Python client provides a simple and intuitive interface to interact with the Briq messaging platform API. It allows you to manage workspaces, campaigns, and send messages programmatically from your Python applications.
+The Briq Python client provides a simple and intuitive interface to interact with the Briq messaging platform API. It allows you to manage workspaces, campaigns, send SMS, and send Karibu WhatsApp messages programmatically from your Python applications.
 
 ## Installation
 
@@ -59,6 +59,14 @@ result = client.message.send_instant(
     recipients=["255***"],
     sender_id="my-sender-id"
 )
+
+# Send a WhatsApp template (opens / reopens the 24-hour window)
+queued = client.whatsapp.send_template(
+    "order_update",
+    to="255712345678",
+    variables={"1": "A1234"},
+)
+print(queued["data"]["message_id"])
 ```
 
 ## Documentation
