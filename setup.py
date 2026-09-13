@@ -1,11 +1,11 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
-with open("README.md", "r", encoding="utf-8") as fh:
+with open("README.md", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
     name="briq",
-    version="0.2.0",
+    version="0.3.0",
     author="Briq Team",
     author_email="sms@briq.tz",
     description="Python client for the Briq messaging platform API",

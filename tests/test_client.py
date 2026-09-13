@@ -5,10 +5,12 @@ from unittest.mock import MagicMock, patch
 
 import requests as req
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from briq.client import Client
+from briq.email import EmailAPI
 from briq.exceptions import BriqAPIError, BriqAuthError, BriqRequestError, BriqValidationError
+from briq.whatsapp import WhatsAppAPI
 
 
 class TestClient(unittest.TestCase):
@@ -27,9 +29,13 @@ class TestClient(unittest.TestCase):
         self.client.set_api_key("new_api_key")
         self.assertEqual(self.client.config.api_key, "new_api_key")
 
+    def test_client_exposes_email_and_whatsapp(self):
+        self.assertIsInstance(self.client.email, EmailAPI)
+        self.assertIsInstance(self.client.whatsapp, WhatsAppAPI)
+
     # --- URL routing tests (Phase 0) ---
 
-    @patch('requests.Session.request')
+    @patch("requests.Session.request")
     def test_request_v1_prefix(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -39,20 +45,20 @@ class TestClient(unittest.TestCase):
 
         result = self.client.request("GET", "test/endpoint")
 
-        mock_request.assert_called_once_with(
-            method="GET",
-            url="http://karibu.briq.tz/v1/test/endpoint",
-            headers=self.client.config.headers,
-            json=None,
-            params=None,
-        )
+        call_kwargs = mock_request.call_args.kwargs
+        self.assertEqual(call_kwargs["method"], "GET")
+        self.assertEqual(call_kwargs["url"], "http://karibu.briq.tz/v1/test/endpoint")
+        self.assertEqual(call_kwargs["headers"]["X-API-Key"], "test-api-key-value")
+        self.assertTrue(call_kwargs["headers"]["User-Agent"].startswith("Briq-Python/"))
+        self.assertEqual(call_kwargs["json"], None)
+        self.assertEqual(call_kwargs["params"], None)
         self.assertEqual(result, {"key": "value"})
 
-    @patch('requests.Session.request')
+    @patch("requests.Session.request")
     def test_request_root_prefix(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.content = b'{}'
+        mock_response.content = b"{}"
         mock_response.json.return_value = {}
         mock_request.return_value = mock_response
 
@@ -61,11 +67,11 @@ class TestClient(unittest.TestCase):
         call_kwargs = mock_request.call_args
         self.assertEqual(call_kwargs.kwargs["url"], "http://karibu.briq.tz/version")
 
-    @patch('requests.Session.request')
+    @patch("requests.Session.request")
     def test_request_developer_apps_prefix(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.content = b'[]'
+        mock_response.content = b"[]"
         mock_response.json.return_value = []
         mock_request.return_value = mock_response
 
@@ -75,11 +81,11 @@ class TestClient(unittest.TestCase):
         call_kwargs = mock_request.call_args
         self.assertEqual(call_kwargs.kwargs["url"], "http://karibu.briq.tz/developer-apps/")
 
-    @patch('requests.Session.request')
+    @patch("requests.Session.request")
     def test_request_workspace_v1(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.content = b'[]'
+        mock_response.content = b"[]"
         mock_response.json.return_value = []
         mock_request.return_value = mock_response
 
@@ -90,11 +96,11 @@ class TestClient(unittest.TestCase):
 
     # --- Auth tests ---
 
-    @patch('requests.Session.request')
+    @patch("requests.Session.request")
     def test_bearer_auth_header(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.content = b'{}'
+        mock_response.content = b"{}"
         mock_response.json.return_value = {}
         mock_request.return_value = mock_response
 
@@ -112,7 +118,7 @@ class TestClient(unittest.TestCase):
 
     # --- Error handling tests ---
 
-    @patch('requests.Session.request')
+    @patch("requests.Session.request")
     def test_request_auth_error(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 401
@@ -122,13 +128,19 @@ class TestClient(unittest.TestCase):
         with self.assertRaises(BriqAuthError):
             self.client.request("GET", "test/endpoint")
 
-    @patch('requests.Session.request')
+    @patch("requests.Session.request")
     def test_request_validation_error(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 422
-        mock_response.content = b'{"detail": [{"loc": ["body", "name"], "msg": "field required", "type": "missing"}]}'
-        mock_response.json.return_value = {"detail": [{"loc": ["body", "name"], "msg": "field required", "type": "missing"}]}
-        mock_response.raise_for_status.side_effect = req.exceptions.HTTPError("422 Unprocessable Entity")
+        mock_response.content = (
+            b'{"detail": [{"loc": ["body", "name"], "msg": "field required", "type": "missing"}]}'
+        )
+        mock_response.json.return_value = {
+            "detail": [{"loc": ["body", "name"], "msg": "field required", "type": "missing"}]
+        }
+        mock_response.raise_for_status.side_effect = req.exceptions.HTTPError(
+            "422 Unprocessable Entity"
+        )
         mock_request.return_value = mock_response
 
         with self.assertRaises(BriqValidationError) as ctx:
@@ -136,7 +148,7 @@ class TestClient(unittest.TestCase):
         self.assertIsInstance(ctx.exception.detail, list)
         self.assertEqual(len(ctx.exception.detail), 1)
 
-    @patch('requests.Session.request')
+    @patch("requests.Session.request")
     def test_request_api_error(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 400
@@ -145,12 +157,14 @@ class TestClient(unittest.TestCase):
         mock_response.raise_for_status.side_effect = req.exceptions.HTTPError("400 Client Error")
         mock_request.return_value = mock_response
 
-        with self.assertRaises(BriqAPIError):
+        with self.assertRaises(BriqAPIError) as ctx:
             self.client.request("GET", "test/endpoint")
+        self.assertEqual(ctx.exception.status_code, 400)
 
-    @patch('requests.Session.request')
+    @patch("requests.Session.request")
     def test_request_network_error(self, mock_request):
         import requests as req
+
         mock_request.side_effect = req.exceptions.RequestException("Connection error")
 
         with self.assertRaises(BriqRequestError):
@@ -158,11 +172,11 @@ class TestClient(unittest.TestCase):
 
     # --- 204 / empty body ---
 
-    @patch('requests.Session.request')
+    @patch("requests.Session.request")
     def test_request_empty_response(self, mock_request):
         mock_response = MagicMock()
         mock_response.status_code = 204
-        mock_response.content = b''
+        mock_response.content = b""
         mock_request.return_value = mock_response
 
         result = self.client.request("DELETE", "test/endpoint")
@@ -170,38 +184,54 @@ class TestClient(unittest.TestCase):
 
     # --- Convenience methods ---
 
-    @patch('briq.client.Client.request')
+    @patch("briq.client.Client.request")
     def test_get(self, mock_request):
         self.client.get("test/endpoint", params={"param": "value"})
         mock_request.assert_called_once_with(
-            "GET", "test/endpoint", params={"param": "value"},
-            prefix="v1", auth="api_key", extra_headers=None,
+            "GET",
+            "test/endpoint",
+            params={"param": "value"},
+            prefix="v1",
+            auth="api_key",
+            extra_headers=None,
         )
 
-    @patch('briq.client.Client.request')
+    @patch("briq.client.Client.request")
     def test_post(self, mock_request):
         self.client.post("test/endpoint", data={"key": "value"})
         mock_request.assert_called_once_with(
-            "POST", "test/endpoint", data={"key": "value"},
-            prefix="v1", auth="api_key", extra_headers=None, files=None,
+            "POST",
+            "test/endpoint",
+            data={"key": "value"},
+            prefix="v1",
+            auth="api_key",
+            extra_headers=None,
+            files=None,
         )
 
-    @patch('briq.client.Client.request')
+    @patch("briq.client.Client.request")
     def test_patch(self, mock_request):
         self.client.patch("test/endpoint", data={"key": "value"})
         mock_request.assert_called_once_with(
-            "PATCH", "test/endpoint", data={"key": "value"},
-            prefix="v1", auth="api_key", extra_headers=None,
+            "PATCH",
+            "test/endpoint",
+            data={"key": "value"},
+            prefix="v1",
+            auth="api_key",
+            extra_headers=None,
         )
 
-    @patch('briq.client.Client.request')
+    @patch("briq.client.Client.request")
     def test_delete(self, mock_request):
         self.client.delete("test/endpoint")
         mock_request.assert_called_once_with(
-            "DELETE", "test/endpoint",
-            prefix="v1", auth="api_key", extra_headers=None,
+            "DELETE",
+            "test/endpoint",
+            prefix="v1",
+            auth="api_key",
+            extra_headers=None,
         )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -72,11 +72,14 @@ class OtpAPI:
         Returns:
             dict: BaseResponse
         """
-        return self.client.post("otp/verify", data={
-            "phone_number": phone_number,
-            "app_key": app_key,
-            "code": code,
-        })
+        return self.client.post(
+            "otp/verify",
+            data={
+                "phone_number": phone_number,
+                "app_key": app_key,
+                "code": code,
+            },
+        )
 
     def resend(
         self,
@@ -127,10 +130,13 @@ class OtpAPI:
         Returns:
             dict: BaseResponse
         """
-        return self.client.post("otp/invalidate", data={
-            "phone_number": phone_number,
-            "app_key": app_key,
-        })
+        return self.client.post(
+            "otp/invalidate",
+            data={
+                "phone_number": phone_number,
+                "app_key": app_key,
+            },
+        )
 
     def status(self, phone_number: str, app_key: str) -> dict:
         """
@@ -143,7 +149,10 @@ class OtpAPI:
         Returns:
             dict: BaseResponse
         """
-        return self.client.get("otp/status", params={
-            "phone_number": phone_number,
-            "app_key": app_key,
-        })
+        return self.client.get(
+            "otp/status",
+            params={
+                "phone_number": phone_number,
+                "app_key": app_key,
+            },
+        )

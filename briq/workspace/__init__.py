@@ -20,7 +20,9 @@ class WorkspaceAPI:
     def __init__(self, client: Client) -> None:
         self.client = client
 
-    def create(self, name: str, description: str | None = None, developer_access: bool = False) -> dict:
+    def create(
+        self, name: str, description: str | None = None, developer_access: bool = False
+    ) -> dict:
         """
         Create a new workspace.
 

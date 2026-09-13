@@ -32,10 +32,13 @@ class VoiceAPI:
         Returns:
             dict: Response data
         """
-        return self.client.post("voice/calls/audio", data={
-            "receiver_number": receiver_number,
-            "audio_url": audio_url,
-        })
+        return self.client.post(
+            "voice/calls/audio",
+            data={
+                "receiver_number": receiver_number,
+                "audio_url": audio_url,
+            },
+        )
 
     def call_audio_upload(self, receiver_number: str, file: BinaryIO) -> dict:
         """
@@ -65,7 +68,10 @@ class VoiceAPI:
         Returns:
             dict: Response data
         """
-        return self.client.post("voice/calls/tts", data={
-            "receiver_number": receiver_number,
-            "text": text,
-        })
+        return self.client.post(
+            "voice/calls/tts",
+            data={
+                "receiver_number": receiver_number,
+                "text": text,
+            },
+        )

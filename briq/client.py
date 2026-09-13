@@ -7,11 +7,13 @@ import requests
 from .campaign import CampaignAPI
 from .config import Config
 from .developer_apps import DeveloperAppsAPI
+from .email import EmailAPI
 from .message import MessageAPI
 from .meta import MetaAPI
 from .otp import OtpAPI
 from .voice import VoiceAPI
 from .webhooks import WebhooksAPI
+from .whatsapp import WhatsAppAPI
 from .workspace import WorkspaceAPI
 
 
@@ -34,6 +36,8 @@ class Client:
         self.otp = OtpAPI(self)
         self.voice = VoiceAPI(self)
         self.webhooks = WebhooksAPI(self)
+        self.email = EmailAPI(self)
+        self.whatsapp = WhatsAppAPI(self)
 
     def _build_url(self, endpoint: str, prefix: str = "v1") -> str:
         """Build the full URL for an API call.
@@ -47,6 +51,12 @@ class Client:
             return f"{base}/{prefix}/{path}"
         return f"{base}/{path}"
 
+    def _user_agent(self) -> str:
+        """Identify this SDK on the wire (not the default python-requests UA)."""
+        from . import __version__
+
+        return f"Briq-Python/{__version__}"
+
     def _build_headers(
         self,
         auth: str,
@@ -54,6 +64,7 @@ class Client:
         files: dict | None,
     ) -> dict[str, str]:
         from .exceptions import BriqAuthError
+
         if auth == "bearer":
             if not self.config.access_token:
                 raise BriqAuthError("Bearer token not set. Call client.login() first.")
@@ -68,6 +79,8 @@ class Client:
 
         if extra_headers:
             headers.update(extra_headers)
+
+        headers.setdefault("User-Agent", self._user_agent())
 
         if files is not None:
             headers.pop("Content-Type", None)
@@ -115,39 +128,84 @@ class Client:
         try:
             if files is not None:
                 response = self.session.request(
-                    method=method, url=url, headers=headers,
-                    files=files, data=data, params=params,
+                    method=method,
+                    url=url,
+                    headers=headers,
+                    files=files,
+                    data=data,
+                    params=params,
                 )
             else:
                 response = self.session.request(
-                    method=method, url=url, headers=headers,
-                    json=data, params=params,
+                    method=method,
+                    url=url,
+                    headers=headers,
+                    json=data,
+                    params=params,
                 )
 
-            response.raise_for_status()
+            body = self._parse_json(response)
 
-            if response.content:
-                return response.json()  # type: ignore[no-any-return]
-            return {}
+            if 200 <= response.status_code < 300:
+                if isinstance(body, dict) and body.get("success") is False and body.get("errors"):
+                    raise BriqAPIError.from_envelope(body, response.status_code)
+                if response.content:
+                    return body  # type: ignore[return-value]
+                return {}
 
-        except requests.exceptions.HTTPError as e:
-            status = response.status_code
-            if status == 401:
+            if response.status_code == 401:
                 raise BriqAuthError("Authentication failed. Check your API key.")
-            elif status == 422:
+
+            if isinstance(body, dict) and self._is_envelope_error(body):
+                raise BriqAPIError.from_envelope(body, response.status_code)
+
+            if response.status_code == 422:
                 detail: list = []
-                try:
-                    detail = response.json().get("detail", [])
-                except Exception:
-                    pass
+                if isinstance(body, dict):
+                    raw_detail = body.get("detail", [])
+                    if isinstance(raw_detail, list):
+                        detail = raw_detail
+                    elif raw_detail:
+                        detail = [raw_detail]
                 raise BriqValidationError(f"Validation error: {detail}", detail=detail)
-            elif status == 400:
-                error_data = response.json() if response.content else {"error": "Bad request"}
-                raise BriqAPIError(f"API error: {error_data}")
-            else:
-                raise BriqAPIError(f"API error: {str(e)}")
+
+            if response.status_code == 400:
+                error_data = body if body is not None else {"error": "Bad request"}
+                raise BriqAPIError(
+                    f"API error: {error_data}",
+                    status_code=400,
+                    body=error_data if isinstance(error_data, (dict, list)) else None,
+                )
+
+            raise BriqAPIError(
+                f"API error: {response.status_code} {response.reason}",
+                status_code=response.status_code,
+                body=body if isinstance(body, (dict, list)) else None,
+            )
+        except (BriqAPIError, BriqAuthError, BriqValidationError):
+            raise
         except requests.exceptions.RequestException as e:
             raise BriqRequestError(f"Request failed: {str(e)}")
+
+    @staticmethod
+    def _parse_json(response: requests.Response) -> dict | list | None:
+        if not response.content:
+            return None
+        try:
+            parsed = response.json()
+        except ValueError:
+            return None
+        if isinstance(parsed, (dict, list)):
+            return parsed
+        return None
+
+    @staticmethod
+    def _is_envelope_error(body: dict) -> bool:
+        errors = body.get("errors")
+        if not isinstance(errors, list) or not errors:
+            return False
+        first = errors[0]
+        return isinstance(first, dict) and "code" in first
 
     def login(self, username: str, password: str) -> dict:
         """
@@ -163,6 +221,7 @@ class Client:
             dict: Token response (includes access_token, token_type)
         """
         from .exceptions import BriqAuthError, BriqRequestError
+
         url = f"{self.config.base_url.rstrip('/')}/auth/login"
         try:
             response = self.session.post(
@@ -186,7 +245,9 @@ class Client:
         auth: str = "api_key",
         extra_headers: dict[str, str] | None = None,
     ) -> dict:
-        return self.request("GET", endpoint, params=params, prefix=prefix, auth=auth, extra_headers=extra_headers)
+        return self.request(
+            "GET", endpoint, params=params, prefix=prefix, auth=auth, extra_headers=extra_headers
+        )
 
     def post(
         self,
@@ -197,7 +258,15 @@ class Client:
         extra_headers: dict[str, str] | None = None,
         files: dict | None = None,
     ) -> dict:
-        return self.request("POST", endpoint, data=data, prefix=prefix, auth=auth, extra_headers=extra_headers, files=files)
+        return self.request(
+            "POST",
+            endpoint,
+            data=data,
+            prefix=prefix,
+            auth=auth,
+            extra_headers=extra_headers,
+            files=files,
+        )
 
     def patch(
         self,
@@ -207,7 +276,9 @@ class Client:
         auth: str = "api_key",
         extra_headers: dict[str, str] | None = None,
     ) -> dict:
-        return self.request("PATCH", endpoint, data=data, prefix=prefix, auth=auth, extra_headers=extra_headers)
+        return self.request(
+            "PATCH", endpoint, data=data, prefix=prefix, auth=auth, extra_headers=extra_headers
+        )
 
     def delete(
         self,
@@ -216,7 +287,9 @@ class Client:
         auth: str = "api_key",
         extra_headers: dict[str, str] | None = None,
     ) -> dict:
-        return self.request("DELETE", endpoint, prefix=prefix, auth=auth, extra_headers=extra_headers)
+        return self.request(
+            "DELETE", endpoint, prefix=prefix, auth=auth, extra_headers=extra_headers
+        )
 
     def set_api_key(self, api_key: str) -> None:
         self.config.api_key = api_key

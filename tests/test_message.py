@@ -3,7 +3,7 @@ import sys
 import unittest
 from unittest.mock import MagicMock
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from briq.message import MessageAPI
 
@@ -21,7 +21,12 @@ class TestMessageAPI(unittest.TestCase):
         self.message_api.send_instant("Hello", ["255788344348"], "BRIQ")
         self.mock_client.post.assert_called_once_with(
             "message/send-instant",
-            data={"content": "Hello", "recipients": ["255788344348"], "sender_id": "BRIQ", "flash": False},
+            data={
+                "content": "Hello",
+                "recipients": ["255788344348"],
+                "sender_id": "BRIQ",
+                "flash": False,
+            },
             extra_headers=None,
         )
 
@@ -41,7 +46,9 @@ class TestMessageAPI(unittest.TestCase):
         self.assertTrue(call_data["flash"])
 
     def test_send_instant_scheduled(self):
-        self.message_api.send_instant("Hello", ["255788344348"], "BRIQ", send_at="2025-12-11T15:30:00Z")
+        self.message_api.send_instant(
+            "Hello", ["255788344348"], "BRIQ", send_at="2025-12-11T15:30:00Z"
+        )
         call_data = self.mock_client.post.call_args.kwargs["data"]
         self.assertEqual(call_data["send_at"], "2025-12-11T15:30:00Z")
 
@@ -60,7 +67,9 @@ class TestMessageAPI(unittest.TestCase):
 
     def test_send_campaign_with_schedule(self):
         self.message_api.send_campaign(
-            "camp-1", "Hello", "BRIQ",
+            "camp-1",
+            "Hello",
+            "BRIQ",
             start_date="2025-01-01T08:00:00Z",
             end_date="2025-01-31T08:00:00Z",
             frequency="daily",
@@ -103,5 +112,5 @@ class TestMessageAPI(unittest.TestCase):
         self.assertEqual(str(context.exception), "Invalid campaign ID")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

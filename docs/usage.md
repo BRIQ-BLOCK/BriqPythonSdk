@@ -19,6 +19,8 @@ This guide covers everything you need to use the Briq Python client library.
 - [OTP](#otp)
 - [Voice Calls](#voice-calls)
 - [Webhooks](#webhooks)
+- [Karibu Email](#karibu-email)
+- [Karibu WhatsApp](#karibu-whatsapp)
 - [Error Handling](#error-handling)
 
 ---
@@ -87,6 +89,8 @@ After initialization the client exposes these sub-APIs:
 | `client.otp`        | `OtpAPI`            |
 | `client.voice`      | `VoiceAPI`          |
 | `client.webhooks`   | `WebhooksAPI`       |
+| `client.email`      | `EmailAPI`          |
+| `client.whatsapp`   | `WhatsAppAPI`       |
 
 ---
 
@@ -435,6 +439,121 @@ updated = client.webhooks.update(
 client.webhooks.delete("webhook-uuid")
 ```
 
+Email delivery events use the existing webhooks API with `service_type="email"`. There is no separate email webhook client.
+
+WhatsApp inbound events use the existing webhooks API with `service_type="whatsapp"`. There is no separate WhatsApp webhook client.
+
+---
+
+## Karibu Email
+
+`client.email` covers the documented Karibu Email surfaces
+([docs](https://docs.briq.tz/Karibu-Email/index.md)). There is no attachment-send API.
+
+```python
+# Sender profiles (read-only; created in the dashboard)
+senders = client.email.list_senders()
+profile = client.email.get_sender("sender-profile-uuid")
+
+# Preflight — nothing queued or charged
+check = client.email.validate(
+    to=["asha@example.com"],
+    subject="Your receipt",
+    text="Thanks. Your order is paid.",
+)
+if not check["data"]["can_send"]:
+    raise SystemExit(check["data"]["errors"])
+
+# Transactional send. Idempotency-Key is generated if omitted.
+accepted = client.email.send_messages(
+    messages=[
+        {
+            "to": "asha@example.com",
+            "subject": "Your receipt #10421",
+            "text": "Thanks. Your order is paid.",
+        }
+    ],
+    transactional=True,
+    idempotency_key="order-10421",  # optional; reused on 503 SEND_FAILED
+)
+job_id = accepted["data"]["job_id"]
+
+# Broadcast (no transactional flag)
+client.email.send_broadcast(
+    subject="We open at 08:00 on Saturday",
+    group_ids=["contact-group-uuid"],
+    text="Come by any time before noon.",
+)
+
+# Track
+client.email.list_messages(job_id=job_id, status="sent")
+client.email.get_message("message-uuid")
+client.email.retry_messages(["message-uuid"])
+
+# Jobs
+client.email.get_job(job_id)
+client.email.list_scheduled_jobs()
+client.email.cancel_job(job_id)
+# Optional helper: poll until queued/scheduled are absent from counts
+client.email.wait_job(job_id, timeout=30, interval=1)
+```
+
+Envelope failures raise `BriqAPIError` with `.code`, `.errors`, and `.request_id`.
+The client retries only documented `503 SEND_FAILED` / `SEND_ALLOWED` on
+`send_messages`, always with the same idempotency key.
+
+---
+
+## Karibu WhatsApp
+
+`client.whatsapp` covers the documented Karibu WhatsApp surfaces
+([conversations](https://docs.briq.tz/guides/whatsapp-conversations.md),
+[messages](https://docs.briq.tz/guides/whatsapp-messages.md),
+[senders & templates](https://docs.briq.tz/guides/whatsapp-senders-templates.md)).
+
+Text, media, and interactive sends need an open 24-hour window. A closed window
+is `422 WINDOW_CLOSED` and raises `BriqAPIError` with `.code == "WINDOW_CLOSED"`.
+Templates always send and reopen the window.
+
+Documented media limits (client-checked when you pass `size_bytes`): image ≤5 MB,
+video/audio ≤16 MB, document ≤100 MB.
+
+```python
+# Inbox
+threads = client.whatsapp.list_conversations(status="unread", limit=20)
+summary = client.whatsapp.inbox_summary()
+thread = client.whatsapp.get_conversation("conversation-uuid")
+client.whatsapp.mark_read("conversation-uuid")
+# client.whatsapp.delete_conversation("conversation-uuid")  # one-way
+
+# First contact / re-engage
+client.whatsapp.send_template(
+    "order_update",
+    to="255712345678",
+    variables={"1": "A1234"},
+)
+
+# Reply inside an open window
+client.whatsapp.send_text("Thanks, your order ships today.", to="255712345678")
+client.whatsapp.send_image(
+    to="255712345678",
+    media_url="https://example.com/receipt.jpg",
+    caption="Your receipt",
+    size_bytes=12_000,  # optional client-side check against the 5 MB limit
+)
+
+# Track
+client.whatsapp.list_messages(conversation_id="conversation-uuid", direction="inbound")
+client.whatsapp.get_status("message-uuid")
+client.whatsapp.send_read_receipt("inbound-message-uuid")
+
+# Catalog
+client.whatsapp.list_senders(is_active=True)
+client.whatsapp.get_sender("sender-uuid")
+client.whatsapp.list_templates(status="APPROVED")
+client.whatsapp.get_template("template-uuid")
+```
+
 ---
 
 ## Error Handling
@@ -467,6 +586,8 @@ except BriqValidationError as e:
 
 except BriqAPIError as e:
     print(f"API error: {e}")
+    # Envelope failures (Email, WhatsApp WINDOW_CLOSED, and other Karibu envelope routes):
+    print(e.code, e.request_id, e.errors)
 
 except BriqRequestError as e:
     print(f"Network/transport error: {e}")

@@ -263,3 +263,116 @@ print(logs)
 detail = client.message.get_message_log("message-uuid")
 print(detail)
 ```
+
+---
+
+## Karibu Email — Send and Track
+
+```python
+import briq
+from briq.exceptions import BriqAPIError
+
+client = briq.Client()
+
+# Confirm a verified sender profile exists (created in the dashboard)
+for profile in client.email.list_senders()["data"]["items"]:
+    print(profile["sender_id"], profile["from_email"], profile["is_verified"])
+
+preflight = client.email.validate(
+    to=["asha@example.com", "juma@example.com"],
+    subject="Your receipt from Duka la Asha",
+    text="Thanks. Your order is paid.",
+)
+print(preflight["data"]["can_send"], preflight["data"]["emails_required"])
+
+try:
+    accepted = client.email.send_messages(
+        messages=[
+            {
+                "to": "asha@example.com",
+                "subject": "Your receipt #10421",
+                "text": "Hi Asha, your order is paid.",
+            }
+        ],
+        transactional=True,
+        idempotency_key="order-10421",
+    )
+except BriqAPIError as e:
+    # Envelope: branch on e.code (INSUFFICIENT_ALLOCATION, SENDER_UNVERIFIED, ...)
+    print(e.code, e.request_id, e.errors)
+    raise
+
+job_id = accepted["data"]["job_id"]
+print("queued", job_id, "replay", accepted["data"].get("idempotent_replay"))
+
+# Optional: poll the job rollup until queued/scheduled drop out of counts
+status = client.email.wait_job(job_id, timeout=30, interval=1)
+print(status["data"]["counts"])
+
+# Broadcast the same body to a saved contact group
+client.email.send_broadcast(
+    subject="We open at 08:00 on Saturday",
+    group_ids=["contact-group-uuid"],
+    html='<p style="font-family:Arial,sans-serif">Come by any time before noon.</p>',
+)
+
+# List failures and retry eligible ones (never re-charged)
+failed = client.email.list_messages(status="failed", job_id=job_id)
+ids = [row["message_id"] for row in failed["data"]["items"]]
+if ids:
+    client.email.retry_messages(ids)
+```
+
+Email webhooks (`email.sent`, `email.failed`, `email.bounced`) are registered with
+the existing `client.webhooks` API (`service_type="email"`). There is no separate
+email webhook client and no attachment-send helper.
+
+---
+
+## Karibu WhatsApp — Template, Reply, Track
+
+```python
+import briq
+from briq.exceptions import BriqAPIError
+from briq.whatsapp import WINDOW_CLOSED
+
+client = briq.Client()
+
+# Start or re-engage a conversation (always allowed)
+queued = client.whatsapp.send_template(
+    "order_update",
+    to="255712345678",
+    variables={"1": "A1234"},
+)
+print("queued", queued["data"]["message_id"])
+
+# Free-form reply — needs an open 24-hour window
+try:
+    client.whatsapp.send_text(
+        "Thanks, your order ships today.",
+        to="255712345678",
+    )
+except BriqAPIError as e:
+    if e.code == WINDOW_CLOSED:
+        print("window closed; send a template instead")
+    else:
+        raise
+
+# Media (image ≤5 MB; pass size_bytes to check before the request)
+client.whatsapp.send_image(
+    to="255712345678",
+    media_url="https://example.com/receipt.jpg",
+    caption="Your receipt",
+)
+
+# Inbox + catch-up without inventing a webhook client
+print(client.whatsapp.inbox_summary()["data"])
+inbound = client.whatsapp.list_messages(direction="inbound", limit=50)
+print(inbound["data"]["items"])
+
+status = client.whatsapp.get_status(queued["data"]["message_id"])
+print(status["data"]["status"])
+```
+
+WhatsApp webhooks (`whatsapp.received`, conversation updates) are registered with
+the existing `client.webhooks` API (`service_type="whatsapp"`).
