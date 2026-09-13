@@ -67,7 +67,9 @@ class DeveloperAppsAPI:
 
     def list_by_workspace(self, workspace_id: str) -> dict:
         """GET /workspaces/{workspace_id}/developer-apps — list apps in a workspace."""
-        return self.client.get(f"workspaces/{workspace_id}/developer-apps", prefix="", auth="bearer")
+        return self.client.get(
+            f"workspaces/{workspace_id}/developer-apps", prefix="", auth="bearer"
+        )
 
     def transfer(self, app_id: str, workspace_id: str) -> dict:
         """POST /developer-apps/{app_id}/transfer — transfer app to another workspace."""
