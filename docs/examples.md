@@ -326,3 +326,53 @@ if ids:
 Email webhooks (`email.sent`, `email.failed`, `email.bounced`) are registered with
 the existing `client.webhooks` API (`service_type="email"`). There is no separate
 email webhook client and no attachment-send helper.
+
+---
+
+## Karibu WhatsApp — Template, Reply, Track
+
+```python
+import briq
+from briq.exceptions import BriqAPIError
+from briq.whatsapp import WINDOW_CLOSED
+
+client = briq.Client()
+
+# Start or re-engage a conversation (always allowed)
+queued = client.whatsapp.send_template(
+    "order_update",
+    to="255712345678",
+    variables={"1": "A1234"},
+)
+print("queued", queued["data"]["message_id"])
+
+# Free-form reply — needs an open 24-hour window
+try:
+    client.whatsapp.send_text(
+        "Thanks, your order ships today.",
+        to="255712345678",
+    )
+except BriqAPIError as e:
+    if e.code == WINDOW_CLOSED:
+        print("window closed; send a template instead")
+    else:
+        raise
+
+# Media (image ≤5 MB; pass size_bytes to check before the request)
+client.whatsapp.send_image(
+    to="255712345678",
+    media_url="https://example.com/receipt.jpg",
+    caption="Your receipt",
+)
+
+# Inbox + catch-up without inventing a webhook client
+print(client.whatsapp.inbox_summary()["data"])
+inbound = client.whatsapp.list_messages(direction="inbound", limit=50)
+print(inbound["data"]["items"])
+
+status = client.whatsapp.get_status(queued["data"]["message_id"])
+print(status["data"]["status"])
+```
+
+WhatsApp webhooks (`whatsapp.received`, conversation updates) are registered with
+the existing `client.webhooks` API (`service_type="whatsapp"`).

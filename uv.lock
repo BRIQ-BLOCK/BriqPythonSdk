@@ -10,7 +10,7 @@ resolution-markers = [
 
 [[package]]
 name = "briq"
-version = "0.2.0"
+version = "0.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "python-dotenv", version = "0.21.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },

@@ -15,6 +15,7 @@ Complete reference for all public classes and methods.
 - [VoiceAPI](#voiceapi)
 - [WebhooksAPI](#webhooksapi)
 - [EmailAPI](#emailapi)
+- [WhatsAppAPI](#whatsappapi)
 - [Exceptions](#exceptions)
 
 ---
@@ -48,6 +49,7 @@ Client(api_key=None, base_url=None)
 | `voice`             | `VoiceAPI`          | Voice call initiation               |
 | `webhooks`          | `WebhooksAPI`       | Webhook management                  |
 | `email`             | `EmailAPI`          | Karibu Email                        |
+| `whatsapp`          | `WhatsAppAPI`       | Karibu WhatsApp                     |
 
 ### Methods
 
@@ -749,6 +751,158 @@ wait_job(job_id, timeout=60.0, interval=1.0) -> dict
 
 Optional helper. Polls `get_job` until `queued` and `scheduled` are absent from
 `data.counts`. Raises `TimeoutError` if `timeout` elapses.
+
+---
+
+## WhatsAppAPI
+
+`client.whatsapp`
+
+Karibu WhatsApp helpers map 1:1 to the documented conversations, messages,
+senders, and templates routes. Inbound events stay on `client.webhooks` with
+`service_type="whatsapp"`.
+
+Text / media / interactive sends need an open 24-hour window. A closed window is
+`422 WINDOW_CLOSED` and is raised as `BriqAPIError` with `.code == "WINDOW_CLOSED"`.
+Templates always send and reopen the window.
+
+Media limits (optional `size_bytes` is checked client-side before the request):
+
+| Kind | Limit |
+|------|-------|
+| image | 5 MB |
+| video | 16 MB |
+| audio | 16 MB |
+| document | 100 MB |
+
+### Conversations
+
+#### list_conversations
+
+```python
+list_conversations(sender=None, sender_id=None, recipient=None, status=None,
+                   search=None, since=None, limit=None, offset=None) -> dict
+```
+
+`GET /v1/whatsapp/conversations`
+
+#### get_conversation
+
+```python
+get_conversation(conversation_id) -> dict
+```
+
+`GET /v1/whatsapp/conversations/{conversation_id}`
+
+#### inbox_summary
+
+```python
+inbox_summary(sender=None, sender_id=None) -> dict
+```
+
+`GET /v1/whatsapp/conversations/summary`
+
+#### mark_read
+
+```python
+mark_read(conversation_id, up_to=None) -> dict
+```
+
+`POST /v1/whatsapp/conversations/{conversation_id}/read` — inbox unread state, not a WhatsApp read receipt.
+
+#### delete_conversation
+
+```python
+delete_conversation(conversation_id) -> dict
+```
+
+`DELETE /v1/whatsapp/conversations/{conversation_id}`
+
+### Messages
+
+Target with `to` + optional `sender`, or `conversation_id`.
+
+#### send_text
+
+```python
+send_text(body, to=None, sender=None, conversation_id=None, sender_id=None) -> dict
+```
+
+`POST /v1/whatsapp/messages/text`
+
+#### send_template
+
+```python
+send_template(template_name, to=None, sender=None, conversation_id=None,
+              sender_id=None, variables=None) -> dict
+```
+
+`POST /v1/whatsapp/messages/template`
+
+#### send_image / send_video / send_document / send_audio
+
+```python
+send_image(..., media_url=None, file_id=None, caption=None, size_bytes=None)
+send_video(..., media_url=None, file_id=None, caption=None, size_bytes=None)
+send_document(..., media_url=None, file_id=None, caption=None, filename=None, size_bytes=None)
+send_audio(..., media_url=None, file_id=None, size_bytes=None)
+```
+
+`POST /v1/whatsapp/messages/{image,video,document,audio}`
+
+#### send_interactive
+
+```python
+send_interactive(interactive, to=None, sender=None, conversation_id=None, sender_id=None) -> dict
+```
+
+`POST /v1/whatsapp/messages/interactive` — pass a WhatsApp `interactive` object (`type` required).
+
+#### list_messages
+
+```python
+list_messages(conversation_id=None, message_type=None, status=None, direction=None,
+              since=None, until=None, limit=None, offset=None) -> dict
+```
+
+`GET /v1/whatsapp/messages`
+
+#### get_status
+
+```python
+get_status(message_id) -> dict
+```
+
+`GET /v1/whatsapp/messages/{message_id}`
+
+#### send_read_receipt
+
+```python
+send_read_receipt(message_id) -> dict
+```
+
+`POST /v1/whatsapp/messages/{message_id}/read`
+
+### Senders and templates
+
+#### list_senders / get_sender
+
+```python
+list_senders(is_active=None, is_default=None) -> dict
+get_sender(sender_id) -> dict
+```
+
+`GET /v1/whatsapp/senders` — these routes return the data shape directly (not the send envelope).
+
+#### list_templates / get_template
+
+```python
+list_templates(sender_id=None, status=None, category=None, language=None,
+               name_or_content=None, cursor=None, limit=None, sort=None) -> dict
+get_template(template_id) -> dict
+```
+
+`GET /v1/whatsapp/templates` — `status` / `category` / `language` may be a string or list (OR).
 
 ---
 
