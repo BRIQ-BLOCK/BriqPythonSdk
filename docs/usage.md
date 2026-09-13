@@ -19,6 +19,7 @@ This guide covers everything you need to use the Briq Python client library.
 - [OTP](#otp)
 - [Voice Calls](#voice-calls)
 - [Webhooks](#webhooks)
+- [Karibu Email](#karibu-email)
 - [Error Handling](#error-handling)
 
 ---
@@ -87,6 +88,7 @@ After initialization the client exposes these sub-APIs:
 | `client.otp`        | `OtpAPI`            |
 | `client.voice`      | `VoiceAPI`          |
 | `client.webhooks`   | `WebhooksAPI`       |
+| `client.email`      | `EmailAPI`          |
 
 ---
 
@@ -435,6 +437,67 @@ updated = client.webhooks.update(
 client.webhooks.delete("webhook-uuid")
 ```
 
+Email delivery events use the existing webhooks API with `service_type="email"`. There is no separate email webhook client.
+
+---
+
+## Karibu Email
+
+`client.email` covers the documented Karibu Email surfaces
+([docs](https://docs.briq.tz/Karibu-Email/index.md)). There is no attachment-send API.
+
+```python
+# Sender profiles (read-only; created in the dashboard)
+senders = client.email.list_senders()
+profile = client.email.get_sender("sender-profile-uuid")
+
+# Preflight — nothing queued or charged
+check = client.email.validate(
+    to=["asha@example.com"],
+    subject="Your receipt",
+    text="Thanks. Your order is paid.",
+)
+if not check["data"]["can_send"]:
+    raise SystemExit(check["data"]["errors"])
+
+# Transactional send. Idempotency-Key is generated if omitted.
+accepted = client.email.send_messages(
+    messages=[
+        {
+            "to": "asha@example.com",
+            "subject": "Your receipt #10421",
+            "text": "Thanks. Your order is paid.",
+        }
+    ],
+    transactional=True,
+    idempotency_key="order-10421",  # optional; reused on 503 SEND_FAILED
+)
+job_id = accepted["data"]["job_id"]
+
+# Broadcast (no transactional flag)
+client.email.send_broadcast(
+    subject="We open at 08:00 on Saturday",
+    group_ids=["contact-group-uuid"],
+    text="Come by any time before noon.",
+)
+
+# Track
+client.email.list_messages(job_id=job_id, status="sent")
+client.email.get_message("message-uuid")
+client.email.retry_messages(["message-uuid"])
+
+# Jobs
+client.email.get_job(job_id)
+client.email.list_scheduled_jobs()
+client.email.cancel_job(job_id)
+# Optional helper: poll until queued/scheduled are absent from counts
+client.email.wait_job(job_id, timeout=30, interval=1)
+```
+
+Envelope failures raise `BriqAPIError` with `.code`, `.errors`, and `.request_id`.
+The client retries only documented `503 SEND_FAILED` / `SEND_ALLOWED` on
+`send_messages`, always with the same idempotency key.
+
 ---
 
 ## Error Handling
@@ -467,6 +530,8 @@ except BriqValidationError as e:
 
 except BriqAPIError as e:
     print(f"API error: {e}")
+    # Envelope failures (email and other Karibu envelope routes):
+    print(e.code, e.request_id, e.errors)
 
 except BriqRequestError as e:
     print(f"Network/transport error: {e}")

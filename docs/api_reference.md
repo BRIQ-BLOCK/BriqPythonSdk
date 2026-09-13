@@ -14,6 +14,7 @@ Complete reference for all public classes and methods.
 - [OtpAPI](#otpapi)
 - [VoiceAPI](#voiceapi)
 - [WebhooksAPI](#webhooksapi)
+- [EmailAPI](#emailapi)
 - [Exceptions](#exceptions)
 
 ---
@@ -46,6 +47,7 @@ Client(api_key=None, base_url=None)
 | `otp`               | `OtpAPI`            | OTP request / verify                |
 | `voice`             | `VoiceAPI`          | Voice call initiation               |
 | `webhooks`          | `WebhooksAPI`       | Webhook management                  |
+| `email`             | `EmailAPI`          | Karibu Email                        |
 
 ### Methods
 
@@ -626,6 +628,130 @@ delete(webhook_id) -> dict
 
 ---
 
+## EmailAPI
+
+`client.email`
+
+Karibu Email helpers map 1:1 to [Karibu Email](https://docs.briq.tz/Karibu-Email/index.md).
+There is no attachment-send API. Register email webhooks with `client.webhooks`
+and `service_type="email"`.
+
+### Methods
+
+#### list_senders
+
+```python
+list_senders() -> dict
+```
+
+`GET /v1/email/senders`
+
+#### get_sender
+
+```python
+get_sender(sender_id) -> dict
+```
+
+`GET /v1/email/senders/{sender_id}`
+
+#### validate
+
+```python
+validate(sender_id=None, to=None, group_ids=None,
+         subject=None, text=None, html=None, send_at=None) -> dict
+```
+
+`POST /v1/email/validate` — preflight. Nothing is queued or charged.
+
+#### send_messages
+
+```python
+send_messages(messages, sender_id=None, template_id=None,
+              send_at=None, transactional=None,
+              idempotency_key=None, max_retries=2) -> dict
+```
+
+`POST /v1/email/messages` — 1–500 individually addressed emails.
+
+| Parameter          | Type         | Default | Description |
+|--------------------|--------------|---------|-------------|
+| `messages`         | `list[dict]` | —       | Per-recipient entries (`to`, optional `subject`/`text`/`html`/`reply_to`/`variables`) |
+| `sender_id`        | `str`        | `None`  | Sender profile; workspace default if omitted |
+| `template_id`      | `str`        | `None`  | Published template; messages must not also carry `text`/`html` |
+| `send_at`          | `str`        | `None`  | UTC schedule time |
+| `transactional`    | `bool`       | `None`  | Receipts / resets / OTPs — no List-Unsubscribe header |
+| `idempotency_key`  | `str`        | auto UUID | `Idempotency-Key` header (max 255). Reused on retry |
+| `max_retries`      | `int`        | `2`     | Extra attempts only for `503 SEND_FAILED` / `SEND_ALLOWED` |
+
+#### send_broadcast
+
+```python
+send_broadcast(subject, sender_id=None, to=None, group_ids=None,
+               text=None, html=None, reply_to=None, send_at=None) -> dict
+```
+
+`POST /v1/email/broadcasts` — one subject and body. No `transactional` flag.
+
+#### list_messages
+
+```python
+list_messages(status=None, to=None, job_id=None, sender_id=None,
+              page=None, limit=None) -> dict
+```
+
+`GET /v1/email/messages`
+
+#### get_message
+
+```python
+get_message(message_id) -> dict
+```
+
+`GET /v1/email/messages/{message_id}`
+
+#### retry_messages
+
+```python
+retry_messages(message_ids) -> dict
+```
+
+`POST /v1/email/messages/retry` — never re-charged.
+
+#### get_job
+
+```python
+get_job(job_id) -> dict
+```
+
+`GET /v1/email/jobs/{job_id}` — poll after a 202.
+
+#### list_scheduled_jobs
+
+```python
+list_scheduled_jobs() -> dict
+```
+
+`GET /v1/email/jobs`
+
+#### cancel_job
+
+```python
+cancel_job(job_id) -> dict
+```
+
+`DELETE /v1/email/jobs/{job_id}`
+
+#### wait_job
+
+```python
+wait_job(job_id, timeout=60.0, interval=1.0) -> dict
+```
+
+Optional helper. Polls `get_job` until `queued` and `scheduled` are absent from
+`data.counts`. Raises `TimeoutError` if `timeout` elapses.
+
+---
+
 ## Exceptions
 
 All exceptions live in `briq.exceptions` and inherit from `BriqError`.
@@ -646,11 +772,21 @@ from briq.exceptions import (
 | `BriqError`           | —           | Base class for all Briq exceptions                       |
 | `BriqAuthError`       | 401         | Authentication failed — invalid or missing credentials   |
 | `BriqValidationError` | 422         | Field-level validation failure; see `.detail` below      |
-| `BriqAPIError`        | 400 / other | API returned an error                                    |
+| `BriqAPIError`        | 400 / other | API returned an error. Envelope bodies set `.code`, `.errors`, `.request_id`, `.status_code` |
 | `BriqRequestError`    | —           | Network or transport failure                             |
 | `BriqConfigError`     | —           | Configuration problem (e.g. missing API key)             |
 
 ### BriqValidationError
+
+```python
+class BriqAPIError(BriqError):
+    status_code: int | None
+    code: str | None          # errors[0].code from a Karibu envelope
+    errors: list              # envelope errors array
+    request_id: str | None
+    data: dict | None         # envelope data (e.g. pollable message_id)
+    body: dict | list | None
+```
 
 ```python
 class BriqValidationError(BriqError):

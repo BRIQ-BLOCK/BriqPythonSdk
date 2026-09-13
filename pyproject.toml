@@ -24,7 +24,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Typing :: Typed",
 ]
-keywords = ["briq", "sms", "messaging", "otp", "voice", "api", "client"]
+keywords = ["briq", "sms", "email", "messaging", "otp", "voice", "api", "client"]
 requires-python = ">=3.10"
 dependencies = [
     "requests>=2.25.0",
