@@ -18,7 +18,8 @@ class BriqAPIError(BriqError):
 
     Envelope failures (``{success, data, errors, request_id}``) populate
     ``code``, ``errors``, ``request_id``, and ``data`` so callers can branch
-    on ``errors[0].code`` without parsing the message string.
+    on ``errors[0].code`` without parsing the message string (Email codes
+    such as ``INSUFFICIENT_ALLOCATION``, WhatsApp ``WINDOW_CLOSED``, etc.).
     """
 
     def __init__(

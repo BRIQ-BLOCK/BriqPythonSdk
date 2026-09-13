@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "briq"
-version = "0.2.0"
+version = "0.3.0"
 description = "Python client for the Briq messaging platform API"
 readme = "README.md"
 authors = [
@@ -24,7 +24,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Typing :: Typed",
 ]
-keywords = ["briq", "sms", "email", "messaging", "otp", "voice", "api", "client"]
+keywords = ["briq", "sms", "email", "whatsapp", "messaging", "otp", "voice", "api", "client"]
 requires-python = ">=3.10"
 dependencies = [
     "requests>=2.25.0",

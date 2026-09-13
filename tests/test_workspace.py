@@ -3,7 +3,7 @@ import sys
 import unittest
 from unittest.mock import MagicMock
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from briq.workspace import WorkspaceAPI
 
@@ -28,7 +28,11 @@ class TestWorkspaceAPI(unittest.TestCase):
         self.workspace_api.create("Test Workspace", description="Test Description")
         self.mock_client.post.assert_called_once_with(
             "workspace/create/",
-            data={"name": "Test Workspace", "developer_access": False, "description": "Test Description"},
+            data={
+                "name": "Test Workspace",
+                "developer_access": False,
+                "description": "Test Description",
+            },
         )
 
     def test_create_with_developer_access(self):
@@ -56,7 +60,9 @@ class TestWorkspaceAPI(unittest.TestCase):
         self.assertEqual(result, mock_response)
 
     def test_update_name_and_description(self):
-        self.workspace_api.update("workspace-1", name="Updated Name", description="Updated Description")
+        self.workspace_api.update(
+            "workspace-1", name="Updated Name", description="Updated Description"
+        )
         self.mock_client.patch.assert_called_once_with(
             "workspace/update/workspace-1",
             data={"name": "Updated Name", "description": "Updated Description"},
@@ -95,5 +101,5 @@ class TestWorkspaceAPI(unittest.TestCase):
         self.assertEqual(result, [])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

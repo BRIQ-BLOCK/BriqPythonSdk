@@ -13,6 +13,7 @@ from .meta import MetaAPI
 from .otp import OtpAPI
 from .voice import VoiceAPI
 from .webhooks import WebhooksAPI
+from .whatsapp import WhatsAppAPI
 from .workspace import WorkspaceAPI
 
 
@@ -36,6 +37,7 @@ class Client:
         self.voice = VoiceAPI(self)
         self.webhooks = WebhooksAPI(self)
         self.email = EmailAPI(self)
+        self.whatsapp = WhatsAppAPI(self)
 
     def _build_url(self, endpoint: str, prefix: str = "v1") -> str:
         """Build the full URL for an API call.

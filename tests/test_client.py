@@ -8,7 +8,9 @@ import requests as req
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from briq.client import Client
+from briq.email import EmailAPI
 from briq.exceptions import BriqAPIError, BriqAuthError, BriqRequestError, BriqValidationError
+from briq.whatsapp import WhatsAppAPI
 
 
 class TestClient(unittest.TestCase):
@@ -26,6 +28,10 @@ class TestClient(unittest.TestCase):
     def test_set_api_key(self):
         self.client.set_api_key("new_api_key")
         self.assertEqual(self.client.config.api_key, "new_api_key")
+
+    def test_client_exposes_email_and_whatsapp(self):
+        self.assertIsInstance(self.client.email, EmailAPI)
+        self.assertIsInstance(self.client.whatsapp, WhatsAppAPI)
 
     # --- URL routing tests (Phase 0) ---
 
